@@ -50,4 +50,16 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "회원가입 완료"));
     }
 
+    //로그인
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequestDto loginRequestDto) {
+        try {
+            Map<String, Object> response = authService.login(loginRequestDto);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+
 }

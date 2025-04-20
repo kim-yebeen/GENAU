@@ -1,5 +1,6 @@
 package com.example.genau.user.service;
 
+import com.example.genau.user.dto.LoginRequestDto;
 import com.example.genau.user.dto.SignupRequestDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -7,6 +8,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import com.example.genau.user.domain.User;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Random;
 
 
@@ -46,5 +48,20 @@ public class AuthService {
         userRepository.save(user);
 
         System.out.println("회원가입 완료: " + dto.getEmail());
+    }
+
+    public Map<String, Object> login(LoginRequestDto dto) {
+        User user = userRepository.findByMail(dto.getEmail())
+                .orElseThrow(() -> new RuntimeException("존재하지 않는 이메일입니다."));
+
+        if (!user.getUserPw().equals(dto.getPassword())) {
+            throw new RuntimeException("비밀번호가 일치하지 않습니다.");
+        }
+
+        return Map.of(
+                "message", "로그인 성공",
+                "userId", user.getUserId(),
+                "name", user.getUserName()
+        );
     }
 }
