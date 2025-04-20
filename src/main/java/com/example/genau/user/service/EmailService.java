@@ -22,6 +22,14 @@ public class EmailService {
 
     public boolean verifyCode(String email, String code) {
         String saved = redisTemplate.opsForValue().get(email);
-        return saved != null && saved.equals(code);
+        boolean match = code.equals(saved);
+
+        if (match) {
+            // 인증된 이메일 표시 키 저장
+            redisTemplate.opsForValue().set("verify:" + email, "true", 5, TimeUnit.MINUTES);
+        }
+
+        return match;
     }
+
 }

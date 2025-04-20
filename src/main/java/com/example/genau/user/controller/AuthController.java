@@ -14,8 +14,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final com.example.genau.repository.UserRepository userRepository;
+    private final com.example.genau.user.repository.UserRepository userRepository;
     private final EmailService emailService;
+    private final AuthService authService;
 
     // 이메일 중복 확인
     @GetMapping("/check-email")
@@ -41,4 +42,12 @@ public class AuthController {
         boolean verified = emailService.verifyCode(email, code);
         return ResponseEntity.ok(Map.of("verified", verified));
     }
+
+    //회원가입
+    @PostMapping("/signup")
+    public ResponseEntity<?> signup(@RequestBody SignupRequestDto requestDto) {
+        authService.signup(requestDto);
+        return ResponseEntity.ok(Map.of("message", "회원가입 완료"));
+    }
+
 }

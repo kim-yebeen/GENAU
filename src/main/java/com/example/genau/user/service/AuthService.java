@@ -3,16 +3,19 @@ package com.example.genau.user.service;
 import com.example.genau.user.dto.SignupRequestDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-
+import com.example.genau.user.domain.User;
 import java.time.Duration;
 import java.util.Random;
+
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
-    private final RedisTemplate<String, String> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
+    private final com.example.genau.user.repository.UserRepository userRepository;
 
     public void sendEmailVerificationCode(String email) {
         String code = String.valueOf(new Random().nextInt(899999) + 100000);
@@ -28,9 +31,20 @@ public class AuthService {
     }
 
     public void signup(SignupRequestDto dto) {
-        String verifiedCode = redisTemplate.opsForValue().get("verify:" + dto.getEmail());
-        if (verifiedCode == null) throw new RuntimeException("이메일 인증되지 않음");
-        // DB 저장 로직 생략
+        String verified = redisTemplate.opsForValue().get("verify:" + dto.getEmail());
+        if (!"true".equals(verified)) {
+            throw new RuntimeException("이메일 인증되지 않음");
+        }
+
+        // 유저 저장
+        User user = User.builder()
+                .userName(dto.getName())
+                .userPw(dto.getPassword()) // 이건 나중에 암호화 필요
+                .mail(dto.getEmail())
+                .build();
+
+        userRepository.save(user);
+
         System.out.println("회원가입 완료: " + dto.getEmail());
     }
 }
