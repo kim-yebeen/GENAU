@@ -3,6 +3,7 @@ package com.example.genau.user.controller;
 import com.example.genau.user.service.AuthService;
 import com.example.genau.user.dto.*;
 import com.example.genau.user.service.EmailService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -45,7 +46,7 @@ public class AuthController {
 
     //회원가입
     @PostMapping("/signup")
-    public ResponseEntity<?> signup(@RequestBody SignupRequestDto requestDto) {
+    public ResponseEntity<?> signup(@RequestBody @Valid SignupRequestDto requestDto) {
         authService.signup(requestDto);
         return ResponseEntity.ok(Map.of("message", "회원가입 완료"));
     }

@@ -33,20 +33,25 @@ public class AuthService {
     }
 
     public void signup(SignupRequestDto dto) {
+        // ✅ 1. 이메일 중복 체크
+        if (userRepository.existsByMail(dto.getEmail())) {
+            throw new RuntimeException("이미 사용 중인 이메일입니다.");
+        }
+
+        // ✅ 2. 이메일 인증 여부 체크
         String verified = redisTemplate.opsForValue().get("verify:" + dto.getEmail());
         if (!"true".equals(verified)) {
             throw new RuntimeException("이메일 인증되지 않음");
         }
 
-        // 유저 저장
+        // ✅ 3. 유저 저장
         User user = User.builder()
                 .userName(dto.getName())
-                .userPw(dto.getPassword()) // 이건 나중에 암호화 필요
+                .userPw(dto.getPassword()) // 추후 암호화 필요
                 .mail(dto.getEmail())
                 .build();
 
         userRepository.save(user);
-
         System.out.println("회원가입 완료: " + dto.getEmail());
     }
 
