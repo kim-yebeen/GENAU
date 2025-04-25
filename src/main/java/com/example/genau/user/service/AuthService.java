@@ -1,6 +1,7 @@
 package com.example.genau.user.service;
 
 import com.example.genau.user.dto.LoginRequestDto;
+import com.example.genau.user.dto.ResetPasswordRequestDto;
 import com.example.genau.user.dto.SignupRequestDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -30,6 +31,21 @@ public class AuthService {
         String key = "verify:" + email;
         String savedCode = redisTemplate.opsForValue().get(key);
         return savedCode != null && savedCode.equals(code);
+    }
+
+    // com.example.genau.user.service.AuthService.java
+
+    public void resetPassword(ResetPasswordRequestDto dto) {
+        String verified = redisTemplate.opsForValue().get("verify:" + dto.getEmail());
+        if (!"true".equals(verified)) {
+            throw new RuntimeException("이메일 인증되지 않음");
+        }
+
+        User user = userRepository.findByMail(dto.getEmail())
+                .orElseThrow(() -> new RuntimeException("해당 이메일의 유저가 존재하지 않습니다."));
+
+        user.setUserPw(dto.getNewPassword()); // 암호화가 필요하다면 여기서 적용
+        userRepository.save(user);
     }
 
     public void signup(SignupRequestDto dto) {

@@ -62,5 +62,16 @@ public class AuthController {
         }
     }
 
+    //비밀번호 변경
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequestDto dto) {
+        try {
+            authService.resetPassword(dto);
+            return ResponseEntity.ok(Map.of("message", "비밀번호가 성공적으로 변경되었습니다."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
 
 }
