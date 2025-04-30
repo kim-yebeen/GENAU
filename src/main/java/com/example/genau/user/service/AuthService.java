@@ -49,6 +49,7 @@ public class AuthService {
     }
 
     public void signup(SignupRequestDto dto) {
+
         // ✅ 1. 이메일 중복 체크
         if (userRepository.existsByMail(dto.getEmail())) {
             throw new RuntimeException("이미 사용 중인 이메일입니다.");

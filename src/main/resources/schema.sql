@@ -3,12 +3,14 @@ CREATE TABLE IF NOT EXISTS "user" (
     user_name   VARCHAR(255) NOT NULL,
     user_pw     VARCHAR(255) NOT NULL,
     mail        VARCHAR(255) UNIQUE NOT NULL
+    user_image  TEXT
     );
 
 CREATE TABLE IF NOT EXISTS team (
     team_id     SERIAL PRIMARY KEY,
     team_name   VARCHAR(255) NOT NULL,
     team_des    TEXT
+    team_image  TEXT
     );
 
 CREATE TABLE IF NOT EXISTS teammates (
@@ -16,6 +18,7 @@ CREATE TABLE IF NOT EXISTS teammates (
     user_id            INT REFERENCES "user"(user_id) ON DELETE CASCADE,
     team_id            INT REFERENCES team(team_id) ON DELETE CASCADE,
     team_participated  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    team_manage        boolean
     );
 
 CREATE TABLE IF NOT EXISTS category (

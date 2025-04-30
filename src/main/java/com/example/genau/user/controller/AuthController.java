@@ -43,6 +43,7 @@ public class AuthController {
     }
 
     // 인증코드 검증
+    /*
     @PostMapping("/verify-code")
     public ResponseEntity<?> verifyCode(@RequestBody Map<String, String> request) {
         String email = request.get("email");
@@ -51,6 +52,13 @@ public class AuthController {
         boolean verified = emailService.verifyCode(email, code);
         return ResponseEntity.ok(Map.of("verified", verified));
     }
+    */
+    @PostMapping("/verify-code")
+    public ResponseEntity<?> verifyCode(@RequestBody EmailVerifyDto req) {
+        boolean ok = emailService.verifyCode(req.getEmail(), req.getCode());
+        return ResponseEntity.ok(Map.of("verified", ok));
+    }
+
 
     //회원가입
     @PostMapping("/signup")
