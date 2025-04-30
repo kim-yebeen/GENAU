@@ -16,11 +16,17 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                //.csrf(csrf -> csrf.disable())
+                //.cors(cors -> cors.configurationSource(corsConfigurationSource())) // ✅ CORS 설정
+                //.authorizeHttpRequests((authz) -> authz
+                //.requestMatchers("/auth/**", "/api/team", "/api/todos").permitAll()
+                //.anyRequest().authenticated()
+                //);
+
                 .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // ✅ CORS 설정
-                .authorizeHttpRequests((authz) -> authz
-                        .requestMatchers("/auth/**").permitAll()
-                        .anyRequest().authenticated()
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .authorizeHttpRequests(authz -> authz
+                        .anyRequest().permitAll() // ✅ 모든 요청을 허용
                 );
 
         return http.build();

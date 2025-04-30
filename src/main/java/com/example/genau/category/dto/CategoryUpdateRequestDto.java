@@ -1,2 +1,10 @@
-package com.example.genau.category.dto;public class CategoryUpdateRequestDto {
+package com.example.genau.category.dto;
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class CategoryUpdateRequestDto {
+    private String catName;
 }
