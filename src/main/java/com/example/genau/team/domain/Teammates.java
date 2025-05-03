@@ -19,7 +19,7 @@ public class Teammates {
 
     private LocalDateTime teamParticipated; // 팀 참여일
 
-    @Column(nullable = false)
+    @Column(name = "is_manager", nullable = false)
     private Boolean isManager; // ✅ 팀 관리 여부 (true = 팀장)
 
     public Long getTeammatesId() {

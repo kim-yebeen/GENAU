@@ -17,7 +17,7 @@ import java.util.Map;
 public class TeamController {
     private final TeamService teamService;
 
-
+    //팀 생성
     @PostMapping
     public ResponseEntity<Team> createTeam(@RequestBody TeamCreateRequest request) {
         Team created = teamService.createTeam(request);
@@ -26,16 +26,43 @@ public class TeamController {
                 .body(created);
     }
 
-    /**
-     * PUT /teams/{teamId}
-     * Update an existing team’s metadata.
-     */
-    @PutMapping("/{teamId}")
-    public ResponseEntity<Map<String, String>> updateTeam(
+    //팀 정보 조회
+    @GetMapping("/{teamId}")
+    public ResponseEntity<Team> getTeam(@PathVariable Long teamId) {
+        Team team = teamService.getTeam(teamId);
+        return ResponseEntity.ok(team);
+    }
+
+    //팀 정보 수정
+    // 3) 팀 정보 수정 (userId도 body 에서 꺼냄)
+    @PatchMapping("/{teamId}")
+    public ResponseEntity<?> updateTeam(
             @PathVariable Long teamId,
-            @RequestBody TeamUpdateRequestDto dto) {
-        teamService.updateTeam(teamId, dto);
-        return ResponseEntity
-                .ok(Map.of("message", "팀 정보가 업데이트되었습니다."));
+            @RequestBody TeamUpdateRequestDto dto
+    ) {
+        teamService.updateTeam(teamId, dto.getUserId(), dto);
+        return ResponseEntity.ok(Map.of("message", "팀 정보가 업데이트되었습니다."));
+    }
+
+    // 4) 팀 나가기 (팀 생성자만 호출 가능)
+    @PostMapping("/{teamId}/leave")
+    public ResponseEntity<?> leaveTeam(
+            @PathVariable Long teamId,
+            @RequestBody Map<String, Long> body  // { "userId": ... }
+    ) {
+        Long userId = body.get("userId");
+        teamService.leaveTeam(teamId, userId);
+        return ResponseEntity.ok(Map.of("message", "팀에서 나갔습니다."));
+    }
+
+    // 5) 팀 삭제 (팀 생성자만 가능)
+    @DeleteMapping("/{teamId}")
+    public ResponseEntity<?> deleteTeam(
+            @PathVariable Long teamId,
+            @RequestBody Map<String, Long> body  // { "userId": ... }
+    ) {
+        Long userId = body.get("userId");
+        teamService.deleteTeam(teamId, userId);
+        return ResponseEntity.ok(Map.of("message", "팀이 삭제되었습니다."));
     }
 }
