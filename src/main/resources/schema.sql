@@ -51,3 +51,15 @@ CREATE TABLE IF NOT EXISTS notice (
     notice_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     is_read        BOOLEAN DEFAULT FALSE
     );
+
+CREATE TABLE IF NOT EXISTS invitation (
+                                          invitation_id   SERIAL PRIMARY KEY,
+                                          team_id         INT         NOT NULL
+                                          REFERENCES team(team_id)
+    ON DELETE CASCADE,
+    email           VARCHAR(255) NOT NULL,        -- 초대할 유저 이메일
+    token           VARCHAR(64)  NOT NULL UNIQUE, -- 수락용 랜덤 토큰(UUID)
+    created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
+    expires_at      TIMESTAMP    NOT NULL,        -- 토큰 만료 시각
+    accepted        BOOLEAN      NOT NULL DEFAULT FALSE
+    );
