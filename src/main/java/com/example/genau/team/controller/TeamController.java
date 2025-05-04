@@ -2,6 +2,7 @@ package com.example.genau.team.controller;
 
 import com.example.genau.team.domain.Team;
 import com.example.genau.team.dto.TeamCreateRequest;
+import com.example.genau.team.dto.TeamMemberDto;
 import com.example.genau.team.dto.TeamUpdateRequestDto;
 import com.example.genau.team.service.TeamService;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -66,5 +68,10 @@ public class TeamController {
         return ResponseEntity.ok(Map.of("message", "팀이 삭제되었습니다."));
     }
 
-
+    // 팀원 전체 조회
+    @GetMapping("/{teamId}/members")
+    public ResponseEntity<List<TeamMemberDto>> getTeamMembers(@PathVariable Long teamId) {
+        List<TeamMemberDto> members = teamService.listTeamMembers(teamId);
+        return ResponseEntity.ok(members);
+    }
 }

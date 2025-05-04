@@ -2,6 +2,7 @@ package com.example.genau.team.service;
 
 import com.example.genau.team.domain.Teammates;
 import com.example.genau.team.dto.TeamCreateRequest;
+import com.example.genau.team.dto.TeamMemberDto;
 import com.example.genau.team.dto.TeamUpdateRequestDto;
 import com.example.genau.team.domain.Team;
 import com.example.genau.team.repository.TeamRepository;
@@ -13,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.security.access.AccessDeniedException;
 
 @Service
@@ -115,5 +118,21 @@ public class TeamService {
         teamRepository.delete(team);
     }
 
-
+    //팀원조회
+    @Transactional(readOnly = true)
+    public List<TeamMemberDto> listTeamMembers(Long teamId) {
+        return teammatesRepository.findAllByTeamId(teamId).stream()
+                .map(tm -> {
+                    String name = userRepository.findById(tm.getUserId())
+                            .map(u -> u.getUserName())
+                            .orElse("Unknown");
+                    return new TeamMemberDto(
+                            tm.getUserId(),
+                            name,
+                            tm.getIsManager(),
+                            tm.getTeamParticipated()
+                    );
+                })
+                .toList();
+    }
 }

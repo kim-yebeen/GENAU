@@ -3,6 +3,8 @@ package com.example.genau.team.repository;
 import com.example.genau.team.domain.Teammates;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
+
 public interface TeammatesRepository extends JpaRepository<Teammates, Long> {
     // 팀 나가기용
     void deleteByTeamIdAndUserId(Long teamId, Long userId);
@@ -11,4 +13,5 @@ public interface TeammatesRepository extends JpaRepository<Teammates, Long> {
 
     boolean existsByTeamIdAndUserIdAndIsManagerTrue(Long teamId, Long userId);
     boolean existsByTeamIdAndUserId(Long teamId, Long userId);
+    List<Teammates> findAllByTeamId(Long teamId);
 }
