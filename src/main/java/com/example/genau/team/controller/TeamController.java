@@ -65,4 +65,6 @@ public class TeamController {
         teamService.deleteTeam(teamId, userId);
         return ResponseEntity.ok(Map.of("message", "팀이 삭제되었습니다."));
     }
+
+
 }

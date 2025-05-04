@@ -71,4 +71,52 @@ public class EmailService {
         String flag = redisTemplate.opsForValue().get(VERIFIED_KEY_PREFIX + email);
         return "true".equals(flag);
     }
+
+
+    /**
+     * 팀 초대 링크를 HTML 메일로 발송합니다.
+     * @param toEmail  초대 받을 사람 이메일
+     * @param link     초대 수락용 URL
+     */
+    public void sendInvitationLink(String toEmail, String link) {
+        // 메일 제목
+        String subject = "[GENAU] 팀 스페이스 초대";
+
+        // HTML 본문: 링크 클릭 유도 + 만료 안내
+        String htmlBody = """
+            <p>안녕하세요!</p>
+            <p>다음 링크를 클릭하시면 <strong>GENAU</strong> 팀 스페이스에 참여하실 수 있습니다:</p>
+            <p><a href="%s" target="_blank">팀 스페이스 참가하기</a></p>
+            <p>• 이 링크는 발행 후 <strong>7일간</strong> 유효하며,<br/>
+            • 한 번만 사용 가능합니다.</p>
+            <br/>
+            <p>감사합니다.</p>
+            """.formatted(link);
+
+        // 실제 전송
+        sendHtmlMail(toEmail, subject, htmlBody);
+    }
+
+    /**
+     * HTML 형식의 메일을 보냅니다.
+     */
+    public void sendHtmlMail(String to, String subject, String htmlBody) {
+        MimeMessage msg = mailSender.createMimeMessage();
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(msg, "UTF-8");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(htmlBody, true);  // true = HTML 모드
+
+            // 발신자 표시(원하시면 수정)
+            InternetAddress from = new InternetAddress(
+                    "noreply@genau.com", "GENAU 팀", "UTF-8"
+            );
+            msg.setFrom(from);
+
+            mailSender.send(msg);
+        } catch (MessagingException | UnsupportedEncodingException e) {
+            throw new RuntimeException("초대 메일 발송에 실패했습니다.", e);
+        }
+    }
 }

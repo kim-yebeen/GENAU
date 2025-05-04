@@ -6,6 +6,9 @@ import com.example.genau.team.dto.TeamUpdateRequestDto;
 import com.example.genau.team.domain.Team;
 import com.example.genau.team.repository.TeamRepository;
 import com.example.genau.team.repository.TeammatesRepository;
+import com.example.genau.user.domain.User;
+import com.example.genau.user.repository.UserRepository;
+import com.example.genau.user.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +21,10 @@ public class TeamService {
 
     private final TeamRepository teamRepository;
     private final TeammatesRepository teammatesRepository;
+    private final UserRepository userRepository;          // ← UserRepository 주입
+    private final EmailService emailService;              // ← 이메일 발송 서비스
+
+
     // 팀 생성 메서드
     public Team createTeam(TeamCreateRequest request) {
         // 1. 팀 저장
@@ -107,4 +114,6 @@ public class TeamService {
         // 실제 팀 삭제
         teamRepository.delete(team);
     }
+
+
 }

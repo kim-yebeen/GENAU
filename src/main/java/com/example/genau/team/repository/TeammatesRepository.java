@@ -10,5 +10,5 @@ public interface TeammatesRepository extends JpaRepository<Teammates, Long> {
     void deleteAllByTeamId(Long teamId);
 
     boolean existsByTeamIdAndUserIdAndIsManagerTrue(Long teamId, Long userId);
+    boolean existsByTeamIdAndUserId(Long teamId, Long userId);
 }
-

@@ -62,4 +62,4 @@ CREATE TABLE IF NOT EXISTS invitation (
     created_at      TIMESTAMP    NOT NULL DEFAULT NOW(),
     expires_at      TIMESTAMP    NOT NULL,        -- 토큰 만료 시각
     accepted        BOOLEAN      NOT NULL DEFAULT FALSE
-    );
+);
