@@ -6,9 +6,18 @@ import com.example.genau.todo.entity.Todolist;
 import com.example.genau.todo.repository.TodolistRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import java.time.LocalDateTime;
-import java.util.Optional; // ✅ 추가
+import java.util.Optional;// ✅ 추가
+import java.util.List;
 
 @Service
 public class TodolistService {
@@ -19,6 +28,10 @@ public class TodolistService {
         this.todolistRepository = todolistRepository;
     }
 
+    public List<Todolist> getTodosByTeamId(Long teamId) {
+        return todolistRepository.findAllByTeamId(teamId);
+    }
+
     public Todolist createTodolist(TodolistCreateRequest request) {
         Todolist todo = new Todolist();
         todo.setTeamId(request.getTeamId());
@@ -27,6 +40,8 @@ public class TodolistService {
         todo.setDueDate(request.getDueDate());
         todo.setTodoTime(LocalDateTime.now());
         todo.setTodoChecked(false);
+        todo.setCreatorId(request.getCreatorId());
+        todo.setAssigneeId(request.getAssigneeId());
 
         return todolistRepository.save(todo);
     }
@@ -100,16 +115,46 @@ public class TodolistService {
         }
     }
 
-    public String submitFile(Long todoId, MultipartFile file) {
+    public String submitFile(Long todoId, Long teammatesId, MultipartFile file) {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
+
+        if (!todo.getAssigneeId().equals(teammatesId)) {
+            throw new IllegalArgumentException("이 투두는 해당 팀원에게 할당되지 않았습니다.");
+        }
 
         if (file.isEmpty()) {
             throw new IllegalArgumentException("파일이 비어 있습니다.");
         }
 
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || !originalFilename.contains(".")) {
+            throw new IllegalArgumentException("파일 이름에 확장자가 없습니다.");
+        }
+
+        // ✅ 확장자 추출 및 허용 여부 검사
+        String extension = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
+        List<String> allowedExtensions = List.of(
+                "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+                "txt", "md", "csv", "jpg", "jpeg", "png", "gif"
+        );
+
+        if (!allowedExtensions.contains(extension)) {
+            throw new IllegalArgumentException("허용되지 않은 파일 확장자입니다: " + extension);
+        }
+
+        // ✅ 파일 크기 제한 검사
+        long fileSizeInMB = file.getSize() / (1024 * 1024);
+        boolean isMedia = List.of("mp3", "wav", "mp4", "avi", "mov").contains(extension);
+
+        if (isMedia && fileSizeInMB > 100) {
+            throw new IllegalArgumentException("고용량 미디어 파일은 100MB 이하만 업로드 가능합니다.");
+        } else if (!isMedia && fileSizeInMB > 10) {
+            throw new IllegalArgumentException("문서 및 이미지 파일은 10MB 이하만 업로드 가능합니다.");
+        }
+
         try {
-            String originalFilename = file.getOriginalFilename();
+            //String originalFilename = file.getOriginalFilename();
 
             // 1. 프로젝트 루트 기준으로 절대경로 설정
             String uploadDir = System.getProperty("user.dir") + "/uploads";
@@ -128,12 +173,35 @@ public class TodolistService {
             file.transferTo(filePath.toFile());
 
             // (선택) DB에 저장
-            // todo.setUploadedFilePath(filePath.toString());
-            // todolistRepository.save(todo);
+            todo.setUploadedFilePath(filePath.toString());
+            todolistRepository.save(todo);
 
             return "파일 업로드 성공: " + filePath;
         } catch (Exception e) {
             throw new RuntimeException("파일 업로드 실패: " + e.getMessage());
+        }
+    }
+
+    public Resource downloadFile(Long todoId) {
+        Todolist todo = todolistRepository.findById(todoId)
+                .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
+
+        String pathStr = todo.getUploadedFilePath();
+        if (pathStr == null || pathStr.isBlank()) {
+            throw new IllegalArgumentException("해당 투두에는 업로드된 파일이 없습니다.");
+        }
+
+        try {
+            Path path = Paths.get(pathStr).toAbsolutePath().normalize();
+            Resource resource = new UrlResource(path.toUri());
+
+            if (resource.exists() && resource.isReadable()) {
+                return resource;
+            } else {
+                throw new RuntimeException("파일을 읽을 수 없습니다: " + pathStr);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("파일 다운로드 실패: " + e.getMessage());
         }
     }
 
