@@ -4,10 +4,15 @@ import com.example.genau.todo.dto.TodolistCreateRequest;
 import com.example.genau.todo.dto.TodolistUpdateRequest; // ✅ 추가
 import com.example.genau.todo.entity.Todolist;
 import com.example.genau.todo.service.TodolistService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
+import java.util.List;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 
 @RestController
@@ -43,6 +48,11 @@ public class TodolistController {
         return todolistService.validateFileExtension(todoId, file);
     }*/
 
+    @GetMapping("/team/{teamId}")
+    public List<Todolist> getTodosByTeamId(@PathVariable Long teamId) {
+        return todolistService.getTodosByTeamId(teamId);
+    }
+
     // ✅ 여기 추가: 파일 검증 API
     @PostMapping("/{todoId}/verify")
     public String verifyFile(
@@ -63,9 +73,10 @@ public class TodolistController {
     @PostMapping("/{todoId}/submit")
     public ResponseEntity<String> submitFile(
             @PathVariable Long todoId,
+            @RequestParam("teammatesId") Long teammatesId,
             @RequestParam("file") MultipartFile file) {
         try {
-            String result = todolistService.submitFile(todoId, file);
+            String result = todolistService.submitFile(todoId, teammatesId, file);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("요청 오류: " + e.getMessage());
@@ -75,6 +86,21 @@ public class TodolistController {
         }
     }
 
+    @GetMapping("/{todoId}/download")
+    public ResponseEntity<Resource> downloadFile(@PathVariable Long todoId) {
+        Resource resource = todolistService.downloadFile(todoId);
+        String filename = resource.getFilename();
+
+        // UTF-8로 인코딩 (한글 등 비 ASCII 대응)
+        String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8)
+                .replaceAll("\\+", "%20");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + encodedFilename + "\"; filename*=UTF-8''" + encodedFilename)
+                .header(HttpHeaders.CONTENT_TYPE, "application/octet-stream")
+                .body(resource);
+    }
 
 
 }

@@ -14,7 +14,12 @@ public class Todolist {
 
     private Long catId;
     private Long teamId;
-    private Long teammatesId;
+
+    @Column(name = "creator_id")
+    private Long creatorId;
+
+    @Column(name = "assignee_id")
+    private Long assigneeId;
 
     @Column(nullable = false)
     private String todoTitle;
@@ -26,6 +31,9 @@ public class Todolist {
 
     @Column(length = 50) // ✅ 추가
     private String fileForm; // 요구하는 파일 확장자 (예: pdf, docx)
+
+    @Column(name = "uploaded_file_path")
+    private String uploadedFilePath;
 
     // ------------------
     // Getter & Setter
@@ -39,8 +47,11 @@ public class Todolist {
     public Long getTeamId() { return teamId; }
     public void setTeamId(Long teamId) { this.teamId = teamId; }
 
-    public Long getTeammatesId() { return teammatesId; }
-    public void setTeammatesId(Long teammatesId) { this.teammatesId = teammatesId; }
+    public Long getCreatorId() { return creatorId; }
+    public void setCreatorId(Long creatorId) { this.creatorId = creatorId; }
+
+    public Long getAssigneeId() { return assigneeId; }
+    public void setAssigneeId(Long assigneeId) { this.assigneeId = assigneeId; }
 
     public String getTodoTitle() { return todoTitle; }
     public void setTodoTitle(String todoTitle) { this.todoTitle = todoTitle; }
@@ -59,6 +70,9 @@ public class Todolist {
 
     public String getFileForm() { return fileForm; } // ✅ 추가
     public void setFileForm(String fileForm) { this.fileForm = fileForm; } // ✅ 추가
+
+    public String getUploadedFilePath() { return uploadedFilePath; }
+    public void setUploadedFilePath(String uploadedFilePath) { this.uploadedFilePath = uploadedFilePath; }
 }
 
 
