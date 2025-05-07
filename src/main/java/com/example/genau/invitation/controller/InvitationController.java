@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/invitations")
 @RequiredArgsConstructor
@@ -31,11 +33,11 @@ public class InvitationController {
 
     /** 3) 초대 수락 (팀원 등록) */
     @PostMapping("/accept")
-    public ResponseEntity<?> accept(
+    public ResponseEntity<InviteAcceptResponseDto> accept(
             @RequestBody InviteAcceptRequestDto req) {
-        invitationService.acceptInvitation(req);
-        return ResponseEntity.ok().body(
-                java.util.Map.of("message", "초대를 수락했습니다.")
-        );
+        InviteAcceptResponseDto dto = invitationService.acceptInvitation(req);
+        return ResponseEntity.ok(dto);
     }
+
+
 }

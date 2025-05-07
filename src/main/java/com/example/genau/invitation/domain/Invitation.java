@@ -30,4 +30,5 @@ public class Invitation {
 
     @Column(nullable = false)
     private boolean accepted;
+
 }

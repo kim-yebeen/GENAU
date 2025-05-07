@@ -3,6 +3,7 @@ package com.example.genau.invitation.service;
 import com.example.genau.invitation.domain.Invitation;
 import com.example.genau.invitation.dto.*;
 import com.example.genau.invitation.repository.InvitationRepository;
+import com.example.genau.team.domain.Team;
 import com.example.genau.team.domain.Teammates;
 import com.example.genau.team.repository.TeamRepository;
 import com.example.genau.team.repository.TeammatesRepository;
@@ -13,7 +14,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 @Service
 @RequiredArgsConstructor
@@ -43,7 +47,7 @@ public class InvitationService {
         invitationRepository.save(inv);
 
         // 메일
-        String link = "http://localhost:8080/invitations/validate?token=" + token;
+        String link = "http://localhost:5173/invitations/validate?token=" + token;
         String html = """
             <p>GENAU에 초대되었습니다!</p>
             <p><a href="%s">여기를 클릭</a>하여 팀 초대를 수락하세요.</p>
@@ -70,7 +74,7 @@ public class InvitationService {
 
     /** 3) 초대 수락 → teammates에 등록 */
     @Transactional
-    public void acceptInvitation(InviteAcceptRequestDto req) {
+    public InviteAcceptResponseDto acceptInvitation(InviteAcceptRequestDto req) {
         Invitation inv = invitationRepository.findByToken(req.getToken())
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 토큰입니다."));
 
@@ -83,16 +87,17 @@ public class InvitationService {
 
         // 사용자 확인
         User user = userRepository.findByMail(inv.getEmail())
-                .orElseThrow(() -> new RuntimeException("가입되지 않은 사용자입니다."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "가입되지 않은 사용자입니다."));
 
         // 중복 가입 방지
         boolean already = teammatesRepository
                 .existsByTeamIdAndUserId(inv.getTeamId(), user.getUserId());
         if (already) {
-            throw new RuntimeException("이미 팀원으로 등록되어 있습니다.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 팀원으로 등록되어 있습니다.");
         }
 
-        // teammates 레코드 생성
+        // teammates 레코드 생성 (isManager = false)
         teammatesRepository.save(
                 new Teammates(null, user.getUserId(), inv.getTeamId(),
                         LocalDateTime.now(), false)
@@ -101,5 +106,17 @@ public class InvitationService {
         // 초대 상태 업데이트
         inv.setAccepted(true);
         invitationRepository.save(inv);
+
+        // **팀 정보 조회 및 반환**
+        Team team = teamRepository.findById(inv.getTeamId())
+                .orElseThrow(() -> new RuntimeException("팀이 존재하지 않습니다."));
+        return new InviteAcceptResponseDto(
+                team.getTeamId(),
+                team.getTeamName(),
+                team.getTeamDesc()
+        );
     }
+
+
 }
+

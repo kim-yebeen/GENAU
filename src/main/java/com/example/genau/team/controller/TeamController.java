@@ -3,6 +3,7 @@ package com.example.genau.team.controller;
 import com.example.genau.team.domain.Team;
 import com.example.genau.team.dto.TeamCreateRequest;
 import com.example.genau.team.dto.TeamMemberDto;
+import com.example.genau.team.dto.TeamSummaryDto;
 import com.example.genau.team.dto.TeamUpdateRequestDto;
 import com.example.genau.team.service.TeamService;
 import lombok.RequiredArgsConstructor;
@@ -73,5 +74,13 @@ public class TeamController {
     public ResponseEntity<List<TeamMemberDto>> getTeamMembers(@PathVariable Long teamId) {
         List<TeamMemberDto> members = teamService.listTeamMembers(teamId);
         return ResponseEntity.ok(members);
+    }
+
+    @GetMapping("/users/{userId}/teams")
+    public ResponseEntity<List<TeamSummaryDto>> listMyTeamsByUser(
+            @PathVariable Long userId
+    ) {
+        List<TeamSummaryDto> teams = teamService.getMyTeams(userId);
+        return ResponseEntity.ok(teams);
     }
 }

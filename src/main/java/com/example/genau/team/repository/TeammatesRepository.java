@@ -14,4 +14,5 @@ public interface TeammatesRepository extends JpaRepository<Teammates, Long> {
     boolean existsByTeamIdAndUserIdAndIsManagerTrue(Long teamId, Long userId);
     boolean existsByTeamIdAndUserId(Long teamId, Long userId);
     List<Teammates> findAllByTeamId(Long teamId);
+    List<Teammates> findAllByUserId(Long userId);
 }

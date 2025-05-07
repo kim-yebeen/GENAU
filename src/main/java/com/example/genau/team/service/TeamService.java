@@ -3,6 +3,7 @@ package com.example.genau.team.service;
 import com.example.genau.team.domain.Teammates;
 import com.example.genau.team.dto.TeamCreateRequest;
 import com.example.genau.team.dto.TeamMemberDto;
+import com.example.genau.team.dto.TeamSummaryDto;
 import com.example.genau.team.dto.TeamUpdateRequestDto;
 import com.example.genau.team.domain.Team;
 import com.example.genau.team.repository.TeamRepository;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.security.access.AccessDeniedException;
 
@@ -134,5 +136,24 @@ public class TeamService {
                     );
                 })
                 .toList();
+    }
+
+    //사용자가 속한 모든 팀 스페이스 요약 조회
+    @Transactional(readOnly = true)
+    public List<TeamSummaryDto> getMyTeams(Long userId) {
+        List<Teammates> all = teammatesRepository.findAllByUserId(userId);
+        return all.stream().map(tm -> {
+            Team t = teamRepository.findById(tm.getTeamId())
+                    .orElseThrow(() -> new RuntimeException("팀이 없습니다. id=" + tm.getTeamId()));
+            return new TeamSummaryDto(
+                    t.getTeamId(),
+                    t.getTeamName(),
+                    t.getTeamDesc(),
+                    t.getTeamProfileImg(),
+                    tm.getIsManager(),
+                    tm.getTeamParticipated(),
+                    t.getTeamUpdated()
+            );
+        }).collect(Collectors.toList());
     }
 }

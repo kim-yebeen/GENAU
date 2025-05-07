@@ -97,9 +97,7 @@ public class EmailService {
         sendHtmlMail(toEmail, subject, htmlBody);
     }
 
-    /**
-     * HTML 형식의 메일을 보냅니다.
-     */
+    //HTML 형식 메일 보내기
     public void sendHtmlMail(String to, String subject, String htmlBody) {
         MimeMessage msg = mailSender.createMimeMessage();
         try {
