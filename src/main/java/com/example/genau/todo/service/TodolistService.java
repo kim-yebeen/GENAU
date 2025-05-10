@@ -1,5 +1,9 @@
 package com.example.genau.todo.service;
 
+import com.example.genau.category.domain.Category;
+import com.example.genau.category.repository.CategoryRepository;
+import com.example.genau.todo.dto.CategoryTodoDto;
+import com.example.genau.todo.dto.TodoSummaryDto;
 import com.example.genau.todo.dto.TodolistCreateRequest;
 import com.example.genau.todo.dto.TodolistUpdateRequest; // ✅ 추가
 import com.example.genau.todo.entity.Todolist;
@@ -15,19 +19,25 @@ import org.springframework.http.HttpHeaders;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.TemporalAdjusters;
+import java.util.Map;
 import java.util.Optional;// ✅ 추가
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class TodolistService {
 
     private final TodolistRepository todolistRepository;
-
-    public TodolistService(TodolistRepository todolistRepository) {
-        this.todolistRepository = todolistRepository;
+    private final CategoryRepository categoryRepository;
+    public TodolistService(TodolistRepository todolistRepository,
+                           CategoryRepository categoryRepository) {
+        this.todolistRepository   = todolistRepository;
+        this.categoryRepository   = categoryRepository;
     }
-
     public List<Todolist> getTodosByTeamId(Long teamId) {
         return todolistRepository.findAllByTeamId(teamId);
     }
@@ -35,10 +45,12 @@ public class TodolistService {
     public Todolist createTodolist(TodolistCreateRequest request) {
         Todolist todo = new Todolist();
         todo.setTeamId(request.getTeamId());
+        todo.setCatId(request.getCatId());
         todo.setTodoTitle(request.getTodoTitle());
         todo.setTodoDes(request.getTodoDes());
         todo.setDueDate(request.getDueDate());
         todo.setTodoTime(LocalDateTime.now());
+        todo.setFileForm(request.getFileForm());
         todo.setTodoChecked(false);
         todo.setCreatorId(request.getCreatorId());
         todo.setAssigneeId(request.getAssigneeId());
@@ -205,7 +217,67 @@ public class TodolistService {
         }
     }
 
+    /** 카테고리별 할 일 그룹핑 */
+    public List<CategoryTodoDto> getTodosByCategory(Long teamId) {
+        List<Todolist> all = todolistRepository.findAllByTeamId(teamId);
 
+        // 그룹핑: catId → List<TodoSummaryDto>
+        Map<Long, List<TodoSummaryDto>> map = all.stream()
+                .map(this::toSummaryDto)
+                .collect(Collectors.groupingBy(TodoSummaryDto::getCatId));
+
+        // DTO 로 변환
+        return map.entrySet().stream()
+                .map(e -> {
+                    Long catId = e.getKey();
+                    String name = categoryRepository.findById(catId)
+                            .map(Category::getCatName)
+                            .orElse("Unknown");
+                    return new CategoryTodoDto(catId, name, e.getValue());
+                })
+                .toList();
+    }
+
+    /** 이번 주 할 일 (dueDate 오늘 ~ 7일 이내) */
+    public List<TodoSummaryDto> getWeeklyTodos(Long teamId) {
+        LocalDate today = LocalDate.now();
+        LocalDate weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
+        LocalDate weekEnd   = weekStart.plusDays(6);
+
+        return todolistRepository.findAllByTeamId(teamId).stream()
+                .filter(t -> {
+                    LocalDate due = t.getDueDate();
+                    return due != null
+                            && !due.isBefore(weekStart)
+                            && !due.isAfter(weekEnd);
+                })
+                .map(this::toSummaryDto)
+                .toList();
+    }
+
+    private TodoSummaryDto toSummaryDto(Todolist t) {
+        String categoryName = categoryRepository.findById(t.getCatId())
+                .map(Category::getCatName)
+                .orElse("Unknown");
+        return new TodoSummaryDto(
+                t.getTodoId(),
+                t.getTodoTitle(),
+                t.getTodoDes(),
+                t.getDueDate(),
+                t.getTodoChecked(),
+                t.getCatId(),
+                categoryName
+        );
+    }
+
+    /**특정 카테고리만 뽑아주는 메서드**/
+    public List<TodoSummaryDto> getTodosByCategoryId(Long teamId, Long catId) {
+        return todolistRepository
+                .findAllByTeamIdAndCatId(teamId, catId)
+                .stream()
+                .map(this::toSummaryDto)
+                .toList();
+    }
 }
 
 

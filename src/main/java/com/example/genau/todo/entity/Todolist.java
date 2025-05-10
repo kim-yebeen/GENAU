@@ -35,9 +35,7 @@ public class Todolist {
     @Column(name = "uploaded_file_path")
     private String uploadedFilePath;
 
-    // ------------------
-    // Getter & Setter
-    // ------------------
+
     public Long getTodoId() { return todoId; }
     public void setTodoId(Long todoId) { this.todoId = todoId; }
 
