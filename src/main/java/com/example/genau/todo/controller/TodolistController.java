@@ -1,9 +1,6 @@
 package com.example.genau.todo.controller;
 
-import com.example.genau.todo.dto.CategoryTodoDto;
-import com.example.genau.todo.dto.TodoSummaryDto;
-import com.example.genau.todo.dto.TodolistCreateRequest;
-import com.example.genau.todo.dto.TodolistUpdateRequest; // ✅ 추가
+import com.example.genau.todo.dto.*;
 import com.example.genau.todo.entity.Todolist;
 import com.example.genau.todo.service.TodolistService;
 import org.springframework.core.io.Resource;
@@ -125,6 +122,13 @@ public class TodolistController {
         return ResponseEntity.ok(
                 todolistService.getTodosByCategoryId(teamId, catId)
         );
+    }
+
+    @GetMapping("/me/weekly")
+    public List<TeamWeeklyTodoDto> getMyWeeklyTodosByUser(
+            @RequestParam("userId") Long userId
+    ) {
+        return todolistService.getMyWeeklyTodosByUser(userId);
     }
 }
 
