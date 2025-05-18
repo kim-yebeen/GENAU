@@ -63,3 +63,9 @@ CREATE TABLE IF NOT EXISTS invitation (
     expires_at      TIMESTAMP    NOT NULL,        -- 토큰 만료 시각
     accepted        BOOLEAN      NOT NULL DEFAULT FALSE
 );
+
+ALTER TABLE teammates
+DROP CONSTRAINT fk_teammates_user,
+  ADD CONSTRAINT fk_teammates_user
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+    ON DELETE CASCADE;

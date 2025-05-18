@@ -29,7 +29,7 @@ public class NotificationService {
     private final TodolistRepository       todolistRepository;
     private final UserRepository           userRepository;
 
-    /** 1) 팀 참여 즉시 알림 생성 */
+    /** 0) 팀 참여 즉시 알림 생성 */
     public void createTeamJoinNotification(Long newTeammatesId) {
         // 1) 새로 참여한 사람 정보
         Teammates newTm = teammatesRepository.findById(newTeammatesId)
@@ -63,46 +63,67 @@ public class NotificationService {
         }
     }
 
-    /** 2) 할 일 완료 시 알림 생성 */
-    public void createTodoCompleteNotification(Long todoId) {
-        Todolist t = todolistRepository.findById(todoId)
-                .orElseThrow();
-        // 할 일 작성자(teammates_id)에게 알림
-        Long creatorTmId = t.getCreatorId();
-
-        Notice notice = Notice.builder()
-                .teammatesId(creatorTmId)
-                .noticeType("TODO_COMPLETE")
-                .referenceId(todoId)
-                .noticeMessage(
-                        String.format("할 일 \"%s\" 이(가) 완료되었습니다.",
-                                t.getTodoTitle())
-                )
-                .build();
-
-        noticeRepository.save(notice);
-    }
-
-    /** 3) 매일 00:05AM 에 “내일 마감” 알림 일괄 생성 */
-    @Scheduled(cron = "0 5 0 * * *")
+    // 매일 오전 9시에 실행.'내일' 마감인 할 일을 찾아, 담당자에게 알림 생성
+    @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Seoul")
     public void scheduleDueTomorrowNotifications() {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
-        List<Todolist> list =
-                todolistRepository.findAllByDueDate(tomorrow);
+        List<Todolist> list = todolistRepository.findAllByDueDate(tomorrow);
 
         for (Todolist t : list) {
+            // 할당자(assigneeId)에 해당하는 teammates 레코드 찾기
+            Teammates tm = teammatesRepository
+                    .findByTeamIdAndUserId(t.getTeamId(), t.getAssigneeId())
+                    .orElseThrow(() -> new EntityNotFoundException(
+                            "Teammates not found: team=" + t.getTeamId()
+                                    + ", user=" + t.getAssigneeId()));
+
             Notice notice = Notice.builder()
-                    .teammatesId(t.getAssigneeId())
-                    .noticeType("DUE_TOMORROW")
+                    .teammatesId(tm.getTeammatesId())
+                    .noticeType("TODO_DUE_SOON")
                     .referenceId(t.getTodoId())
-                    .noticeMessage(
-                            String.format("할 일 \"%s\" 마감일이 내일입니다.",
-                                    t.getTodoTitle())
-                    )
+                    .noticeMessage("할 일 \"" + t.getTodoTitle() + "\" 마감일이 내일입니다.")
+                    .build();
+
+            noticeRepository.save(notice);
+        }
+    }
+
+    // 2) 할 일이 완료된 경우 → 팀원 전체에게 알림
+    public void createTodoCompletedNotification(Long todoId) {
+        Todolist todo = todolistRepository.findById(todoId)
+                .orElseThrow(() -> new EntityNotFoundException("Todo not found: " + todoId));
+
+        Long teamId = todo.getTeamId();
+        List<Teammates> members = teammatesRepository.findAllByTeamId(teamId);
+
+        for (Teammates tm : members) {
+            Notice notice = Notice.builder()
+                    .teammatesId(tm.getTeammatesId())
+                    .noticeType("TODO_COMPLETED")
+                    .referenceId(todoId)
+                    .noticeMessage("할 일 \"" + todo.getTodoTitle() + "\"가 완료되었습니다.")
                     .build();
             noticeRepository.save(notice);
         }
     }
+
+    //3) 알림 삭제
+
+    public void deleteNotification(Long noticeId) {
+        if (!noticeRepository.existsById(noticeId)) {
+            throw new EntityNotFoundException("Notice not found: " + noticeId);
+        }
+        noticeRepository.deleteById(noticeId);
+    }
+
+    //4) 알림 읽음 표시
+    public void markAsRead(Long noticeId) {
+        Notice notice = noticeRepository.findById(noticeId)
+                .orElseThrow(() -> new EntityNotFoundException("Notice not found: " + noticeId));
+        notice.setIsRead(true);
+        noticeRepository.save(notice);
+    }
+
 
     /** (1) 내 모든 알림 조회 */
     public List<NotificationDto> getNotificationsByUser (Long userId){
@@ -134,12 +155,4 @@ public class NotificationService {
                 .toList();
     }
 
-
-    /** (2) 개별 알림 읽음 처리 */
-    public void markAsRead(Long noticeId) {
-        Notice notice = noticeRepository.findById(noticeId)
-                .orElseThrow(() -> new EntityNotFoundException("알림이 없습니다. id=" + noticeId));
-        notice.setIsRead(true);
-        noticeRepository.save(notice);
-    }
 }
