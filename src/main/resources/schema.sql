@@ -43,8 +43,8 @@ CREATE TABLE IF NOT EXISTS todolist (
     );
 
 CREATE TABLE IF NOT EXISTS notice (
-                                      notice_id      SERIAL PRIMARY KEY,
-                                      teammates_id   INT REFERENCES teammates(teammates_id) ON DELETE CASCADE,
+    notice_id      SERIAL PRIMARY KEY,
+    teammates_id   INT REFERENCES teammates(teammates_id) ON DELETE CASCADE,
     notice_type    VARCHAR(50) NOT NULL,
     reference_id   INT,
     notice_message TEXT,
