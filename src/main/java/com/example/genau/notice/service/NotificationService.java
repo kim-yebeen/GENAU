@@ -64,7 +64,7 @@ public class NotificationService {
     }
 
     // 매일 오전 9시에 실행.'내일' 마감인 할 일을 찾아, 담당자에게 알림 생성
-    @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 5 1 * * *", zone = "Asia/Seoul")
     public void scheduleDueTomorrowNotifications() {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
         List<Todolist> list = todolistRepository.findAllByDueDate(tomorrow);

@@ -37,7 +37,7 @@ import java.util.Map;
 import java.util.Optional;// ✅ 추가
 import java.util.List;
 import java.util.stream.Collectors;
-
+import com.example.genau.notice.service.NotificationService;
 @Service
 @RequiredArgsConstructor
 public class TodolistService {
@@ -46,7 +46,7 @@ public class TodolistService {
     private final CategoryRepository categoryRepository;
     private final TeammatesRepository teammatesRepository;
     private final TeamRepository teamRepository;
-
+    private final NotificationService      notificationService;
 
     public List<Todolist> getTodosByTeamId(Long teamId) {
         return todolistRepository.findAllByTeamId(teamId);
@@ -196,10 +196,16 @@ public class TodolistService {
 
             // DB에 저장
             todo.setUploadedFilePath(filePath.toString());
+            //제출 완료 처리 <--예빈 추가..
+            todo.setTodoChecked(true);
+
             todo.setTodoTime(LocalDateTime.now()); // 제출 시각 저장
             // todo.setSubmitStatus("SUBMITTED"); // 상태 관리가 필요하면
             todo.setSubmittedAt(LocalDateTime.now());
             todolistRepository.save(todo);
+
+            // 완료 알림 보내기 <-- 예빈 추가
+            notificationService.createTodoCompletedNotification(todoId);
 
             return "파일 업로드 성공: " + filePath;
         } catch (Exception e) {
