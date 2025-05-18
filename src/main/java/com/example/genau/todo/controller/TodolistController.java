@@ -140,24 +140,6 @@ public class TodolistController {
         }
     }
 
-    /*@GetMapping("/{todoId}/convert/status")
-    public ResponseEntity<?> getConvertStatus(@PathVariable Long todoId) {
-        try {
-            Todolist todo = todolistService.getTodolist(todoId);
-
-            // 결과 응답 구성
-            return ResponseEntity.ok(
-                    Map.of(
-                            "todoId", todoId,
-                            "status", todo.getConvertStatus(),
-                            "convertedFileUrl", todo.getConvertedFileUrl(),
-                            "convertedAt", todo.getConvertedAt()
-                    )
-            );
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }*/
 
     // 전체 변환 상태별 조회
     @GetMapping("/convert/status")
@@ -198,23 +180,6 @@ public class TodolistController {
         }
     }
 
-
-    /** 2) 이번 주(일~토) 할 일 조회 */
-    /*@GetMapping("/team/{teamId}/weekly")
-    public List<TodoSummaryDto> getWeekly(@PathVariable Long teamId) {
-        return todolistService.getWeeklyTodos(teamId);
-    }*/
-
-    /** 3)특정 카테고리 할 일 조회**/
-    /*@GetMapping("team/{teamId}/category/{catId}")
-    public ResponseEntity<List<TodoSummaryDto>> getByCategoryId(
-            @PathVariable Long teamId,
-            @PathVariable Long catId
-    ) {
-        return ResponseEntity.ok(
-                todolistService.getTodosByCategoryId(teamId, catId)
-        );
-    }*/
 
     @GetMapping("/me/weekly")
     public List<TeamWeeklyTodoDto> getMyWeeklyTodosByUser(
