@@ -64,19 +64,25 @@ public class NotificationService {
     }
 
     // 매일 오전 9시에 실행.'내일' 마감인 할 일을 찾아, 담당자에게 알림 생성
-    @Scheduled(cron = "0 5 1 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 5 2 * * *", zone = "Asia/Seoul")
     public void scheduleDueTomorrowNotifications() {
         LocalDate tomorrow = LocalDate.now().plusDays(1);
         List<Todolist> list = todolistRepository.findAllByDueDate(tomorrow);
 
         for (Todolist t : list) {
-            // 할당자(assigneeId)에 해당하는 teammates 레코드 찾기
+            // ① 이미 완료된 TODO는 건너뛰기
+            if (Boolean.TRUE.equals(t.getTodoChecked())) {
+                continue;
+            }
+
+            // ② 할당자(teammates) 조회
             Teammates tm = teammatesRepository
                     .findByTeamIdAndUserId(t.getTeamId(), t.getAssigneeId())
                     .orElseThrow(() -> new EntityNotFoundException(
                             "Teammates not found: team=" + t.getTeamId()
                                     + ", user=" + t.getAssigneeId()));
 
+            // ③ 알림 생성
             Notice notice = Notice.builder()
                     .teammatesId(tm.getTeammatesId())
                     .noticeType("TODO_DUE_SOON")
