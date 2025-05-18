@@ -22,5 +22,16 @@ public interface TodolistRepository extends JpaRepository<Todolist, Long> {
     List<Todolist> findAllByTeamIdAndConvertStatus(Long teamId, String convertStatus);
 
 
+    /**
+     * 특정 팀(teamId)에서 특정 팀원(teammatesId)에게 할당된
+     * dueDate 범위(start ~ end) 내의 할 일 조회
+     */
+    List<Todolist> findAllByTeamIdAndAssigneeIdAndDueDateBetween(
+            Long teamId,
+            Long assigneeId,
+            LocalDate start,
+            LocalDate end
+    );
+
 }
 

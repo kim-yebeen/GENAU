@@ -12,4 +12,5 @@ public class TeamMemberDto {
     private String userName;
     private boolean isManager;
     private LocalDateTime participatedAt;
+    private String profileImg;
 }

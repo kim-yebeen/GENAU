@@ -7,6 +7,7 @@ import com.example.genau.user.domain.User;
 import com.example.genau.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -19,10 +20,11 @@ public class AuthService {
 
     private final StringRedisTemplate redisTemplate;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     // Redis key prefixes
     private static final String CODE_KEY     = "verify:";
-    private static final String FLAG_KEY     = "verified:";
+    public static final String FLAG_KEY     = "verified:";
 
     /** 1) 인증 코드 발송 */
     public void sendEmailVerificationCode(String email) {
@@ -54,7 +56,14 @@ public class AuthService {
 
         User user = userRepository.findByMail(dto.getEmail())
                 .orElseThrow(() -> new RuntimeException("해당 이메일의 유저가 존재하지 않습니다."));
-        user.setUserPw(dto.getNewPassword()); // 필요하다면 암호화해서 저장
+
+        // 3) 새 비밀번호 ≠ 기존 비밀번호 검증 (추가)
+        if (passwordEncoder.matches(dto.getNewPassword(), user.getUserPw())) {
+            throw new IllegalArgumentException("새 비밀번호는 이전 비밀번호와 달라야 합니다.");
+        }
+
+        // 4) 비밀번호 암호화 후 저장 (기존에 주석 처리된 부분을 활성화)
+        user.setUserPw(passwordEncoder.encode(dto.getNewPassword()));
         userRepository.save(user);
 
         // (선택) 키 정리

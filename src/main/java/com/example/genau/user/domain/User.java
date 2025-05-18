@@ -24,4 +24,6 @@ public class User {
     private String userPw;
     private String mail;
 
+    @Column(name = "user_img")      // DB 컬럼명이 다르면 적절히 변경
+    private String profileImg;
 }

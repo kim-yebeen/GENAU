@@ -6,8 +6,14 @@ import com.example.genau.todo.dto.CategoryTodoDto;
 import com.example.genau.todo.dto.TodoSummaryDto;
 import com.example.genau.todo.dto.TodolistCreateRequest;
 import com.example.genau.todo.dto.TodolistUpdateRequest; // ✅ 추가
+import com.example.genau.team.domain.Teammates;
+import com.example.genau.team.repository.TeamRepository;
+import com.example.genau.team.repository.TeammatesRepository;
+import com.example.genau.todo.dto.*;
 import com.example.genau.todo.entity.Todolist;
 import com.example.genau.todo.repository.TodolistRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.Resource;
@@ -21,6 +27,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpHeaders;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import com.example.genau.team.domain.Team;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -40,6 +47,21 @@ public class TodolistService {
                            CategoryRepository categoryRepository) {
         this.todolistRepository   = todolistRepository;
         this.categoryRepository   = categoryRepository;
+
+    private final TeammatesRepository teammatesRepository;  // 팀원 정보 조회용
+    private final TeamRepository teamRepository;       // 팀명 조회용
+
+    @Autowired
+    public TodolistService(
+            TodolistRepository todolistRepository,
+            CategoryRepository categoryRepository,
+            TeammatesRepository teammatesRepository,
+            TeamRepository teamRepository
+    ) {
+        this.todolistRepository = todolistRepository;
+        this.categoryRepository = categoryRepository;
+        this.teammatesRepository = teammatesRepository;
+        this.teamRepository      = teamRepository;
     }
     public List<Todolist> getTodosByTeamId(Long teamId) {
         return todolistRepository.findAllByTeamId(teamId);
@@ -333,7 +355,120 @@ public class TodolistService {
     }
 
 
+        // 그룹핑: catId → List<TodoSummaryDto>
+        Map<Long, List<TodoSummaryDto>> map = all.stream()
+                .map(this::toSummaryDto)
+                .collect(Collectors.groupingBy(TodoSummaryDto::getCatId));
+
+        // DTO 로 변환
+        return map.entrySet().stream()
+                .map(e -> {
+                    Long catId = e.getKey();
+                    String name = categoryRepository.findById(catId)
+                            .map(Category::getCatName)
+                            .orElse("Unknown");
+                    return new CategoryTodoDto(catId, name, e.getValue());
+                })
+                .toList();
+    }
+
+    /** 이번 주 할 일 (dueDate 오늘 ~ 7일 이내) */
+    public List<TodoSummaryDto> getWeeklyTodos(Long teamId) {
+        LocalDate today = LocalDate.now();
+        LocalDate weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
+        LocalDate weekEnd   = weekStart.plusDays(6);
+
+        return todolistRepository.findAllByTeamId(teamId).stream()
+                .filter(t -> {
+                    LocalDate due = t.getDueDate();
+                    return due != null
+                            && !due.isBefore(weekStart)
+                            && !due.isAfter(weekEnd);
+                })
+                .map(this::toSummaryDto)
+                .toList();
+    }
+
+    private TodoSummaryDto toSummaryDto(Todolist t) {
+        String categoryName = categoryRepository.findById(t.getCatId())
+                .map(Category::getCatName)
+                .orElse("Unknown");
+        return new TodoSummaryDto(
+                t.getTodoId(),
+                t.getTodoTitle(),
+                t.getTodoDes(),
+                t.getDueDate(),
+                t.getTodoChecked(),
+                t.getCatId(),
+                categoryName
+        );
+    }
+
+    /**특정 카테고리만 뽑아주는 메서드**/
+    public List<TodoSummaryDto> getTodosByCategoryId(Long teamId, Long catId) {
+        return todolistRepository
+                .findAllByTeamIdAndCatId(teamId, catId)
+                .stream()
+                .map(this::toSummaryDto)
+                .toList();
+    }
+
+    /**
+     * 내 계정(userId)이 속한 모든 팀별로,
+     * 이번 주(일요일~토요일)에 나(teammatesId)에게 할당된
+     * TODO 목록을 카테고리명과 함께 반환
+     */
+    public List<TeamWeeklyTodoDto> getMyWeeklyTodosByUser(Long userId) {
+        LocalDate today     = LocalDate.now();
+        LocalDate weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
+        LocalDate weekEnd   = weekStart.plusDays(6);
+
+        // 1) 내가 속한 팀 목록 조회
+        List<Teammates> myTeams = teammatesRepository.findAllByUserId(userId);
+
+        return myTeams.stream()
+                .map(tm -> {
+                    Long teamId     = tm.getTeamId();
+                    Long assigneeId = tm.getTeammatesId();
+
+                    // 2) 팀·담당자·기간으로 TODO 조회
+                    List<WeekTodoDto> todos = todolistRepository
+                            .findAllByTeamIdAndAssigneeIdAndDueDateBetween(
+                                    teamId, userId, weekStart, weekEnd
+                            )
+                            .stream()
+                            .map(t -> {
+                                // 카테고리명 조회
+                                String catName = categoryRepository.findById(t.getCatId())
+                                        .map(Category::getCatName)
+                                        .orElse("Unknown");
+                                return new WeekTodoDto(
+                                        t.getTodoId(),
+                                        t.getCatId(),
+                                        catName,
+                                        t.getTeamId(),
+                                        t.getAssigneeId(),
+                                        t.getTodoTitle(),
+                                        t.getTodoDes(),
+                                        t.getTodoChecked(),
+                                        t.getDueDate()
+                                );
+                            })
+                            .toList();
+
+                    // 3) 팀명 조회
+                    String teamName = teamRepository.findById(teamId)
+                            .map(Team::getTeamName)
+                            .orElse("Unknown");
+
+                    return new TeamWeeklyTodoDto(teamId, teamName, todos);
+                })
+                // 4) TODO가 하나도 없는 팀은 제외
+                .filter(dto -> !dto.getTodos().isEmpty())
+                .toList();
+    }
 }
+
 
 
 
