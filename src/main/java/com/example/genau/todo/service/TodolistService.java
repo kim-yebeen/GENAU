@@ -340,63 +340,6 @@ public class TodolistService {
     }
 
 
-        // 그룹핑: catId → List<TodoSummaryDto>
-        /*Map<Long, List<TodoSummaryDto>> map = all.stream()
-                .map(this::toSummaryDto)
-                .collect(Collectors.groupingBy(TodoSummaryDto::getCatId));
-
-        // DTO 로 변환
-        return map.entrySet().stream()
-                .map(e -> {
-                    Long catId = e.getKey();
-                    String name = categoryRepository.findById(catId)
-                            .map(Category::getCatName)
-                            .orElse("Unknown");
-                    return new CategoryTodoDto(catId, name, e.getValue());
-                })
-                .toList();
-    }*/
-
-    /** 이번 주 할 일 (dueDate 오늘 ~ 7일 이내) */
-    /*public List<TodoSummaryDto> getWeeklyTodos(Long teamId) {
-        LocalDate today = LocalDate.now();
-        LocalDate weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
-        LocalDate weekEnd   = weekStart.plusDays(6);
-
-        return todolistRepository.findAllByTeamId(teamId).stream()
-                .filter(t -> {
-                    LocalDate due = t.getDueDate();
-                    return due != null
-                            && !due.isBefore(weekStart)
-                            && !due.isAfter(weekEnd);
-                })
-                .map(this::toSummaryDto)
-                .toList();
-    }
-
-    private TodoSummaryDto toSummaryDto(Todolist t) {
-        String categoryName = categoryRepository.findById(t.getCatId())
-                .map(Category::getCatName)
-                .orElse("Unknown");
-        return new TodoSummaryDto(
-                t.getTodoId(),
-                t.getTodoTitle(),
-                t.getTodoDes(),
-                t.getDueDate(),
-                t.getTodoChecked(),
-                t.getCatId(),
-                categoryName
-        );
-    }*/
-
-    /**특정 카테고리만 뽑아주는 메서드**/
-    /*public List<TodoSummaryDto> getTodosByCategoryId(Long teamId, Long catId) {
-        return todolistRepository
-                .findAllByTeamIdAndCatId(teamId, catId)
-                .stream()
-                .map(this::toSummaryDto)
-                .toList();
-    }*/
 
     /**
      * 내 계정(userId)이 속한 모든 팀별로,
