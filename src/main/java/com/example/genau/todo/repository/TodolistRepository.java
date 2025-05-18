@@ -15,6 +15,12 @@ public interface TodolistRepository extends JpaRepository<Todolist, Long> {
     // 이번 주(일요일~토요일) 할 일
     List<Todolist> findAllByTeamIdAndDueDateBetween(Long teamId, LocalDate start, LocalDate end);
 
+    // 변환 완료된 투두 목록 조회
+    List<Todolist> findAllByConvertStatus(String convertStatus);
+
+    // 특정 팀의 변환 완료된 투두 조회
+    List<Todolist> findAllByTeamIdAndConvertStatus(Long teamId, String convertStatus);
+
 
 }
 

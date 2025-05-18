@@ -5,6 +5,7 @@ import com.example.genau.todo.dto.TodoSummaryDto;
 import com.example.genau.todo.dto.TodolistCreateRequest;
 import com.example.genau.todo.dto.TodolistUpdateRequest; // ✅ 추가
 import com.example.genau.todo.entity.Todolist;
+import com.example.genau.todo.service.FileConvertService;
 import com.example.genau.todo.service.TodolistService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -15,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import java.util.List;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.HashMap;
 
 
 @RestController
@@ -22,9 +25,11 @@ import java.nio.charset.StandardCharsets;
 public class TodolistController {
 
     private final TodolistService todolistService;
+    private final FileConvertService fileConvertService;
 
-    public TodolistController(TodolistService todolistService) {
+    public TodolistController(TodolistService todolistService, FileConvertService fileConvertService) {
         this.todolistService = todolistService;
+        this.fileConvertService = fileConvertService;
     }
 
     @PostMapping
@@ -43,13 +48,6 @@ public class TodolistController {
         todolistService.deleteTodolist(todoId);
     }
 
-    // ✅ 여기 추가: 파일 검증 API
-    /*@PostMapping("/{todoId}/validate-file")
-    public boolean validateFileExtension(@PathVariable Long todoId,
-                                         @RequestParam("file") MultipartFile file) {
-        return todolistService.validateFileExtension(todoId, file);
-    }*/
-
     @GetMapping("/team/{teamId}")
     public List<Todolist> getTodosByTeamId(@PathVariable Long teamId) {
         return todolistService.getTodosByTeamId(teamId);
@@ -64,14 +62,6 @@ public class TodolistController {
         return todolistService.verifyFile(todoId, file);
     }
 
-    // ✅ 여기 추가: 파일 업로드 API
-    /*@PostMapping("/{todoId}/submit")
-    public String submitFile(
-            @PathVariable Long todoId,
-            @RequestParam("file") MultipartFile file
-    ) {
-        return todolistService.submitFile(todoId, file);
-    }*/
     @PostMapping("/{todoId}/submit")
     public ResponseEntity<String> submitFile(
             @PathVariable Long todoId,
@@ -126,6 +116,88 @@ public class TodolistController {
                 todolistService.getTodosByCategoryId(teamId, catId)
         );
     }
+
+    @PostMapping("/{todoId}/convert")
+    public ResponseEntity<Resource> convertFile(
+            @PathVariable Long todoId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("targetFormat") String targetFormat
+    ){
+        try {
+            Resource result = fileConvertService.convertFile(file, targetFormat, todoId);
+            String filename = result.getFilename();
+            String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFilename + "\"; filename*=UTF-8''" + encodedFilename)
+                    .header(HttpHeaders.CONTENT_TYPE, "application/octet-stream")
+                    .body(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
+        }
+    }
+
+    /*@GetMapping("/{todoId}/convert/status")
+    public ResponseEntity<?> getConvertStatus(@PathVariable Long todoId) {
+        try {
+            Todolist todo = todolistService.getTodolist(todoId);
+
+            // 결과 응답 구성
+            return ResponseEntity.ok(
+                    Map.of(
+                            "todoId", todoId,
+                            "status", todo.getConvertStatus(),
+                            "convertedFileUrl", todo.getConvertedFileUrl(),
+                            "convertedAt", todo.getConvertedAt()
+                    )
+            );
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }*/
+
+    // 전체 변환 상태별 조회
+    @GetMapping("/convert/status")
+    public List<Todolist> getByConvertStatus(@RequestParam("status") String status) {
+        return todolistService.getTodosByConvertStatus(status);
+    }
+
+    // 팀별 변환 상태 조회
+    @GetMapping("/team/{teamId}/convert/status")
+    public List<Todolist> getByTeamAndConvertStatus(
+            @PathVariable Long teamId,
+            @RequestParam("status") String status
+    ) {
+        return todolistService.getTodosByTeamAndStatus(teamId, status);
+    }
+
+    // 업로드 파일 삭제
+    @DeleteMapping("/{todoId}/upload-file")
+    public ResponseEntity<String> deleteUploadedFile(@PathVariable Long todoId) {
+        try {
+            todolistService.deleteUploadedFile(todoId);
+            return ResponseEntity.ok("업로드된 파일이 삭제되었습니다.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("파일 삭제 실패: " + e.getMessage());
+        }
+    }
+
+    // 변환된 파일 삭제
+    @DeleteMapping("/{todoId}/converted-file")
+    public ResponseEntity<String> deleteConvertedFile(@PathVariable Long todoId) {
+        try {
+            todolistService.deleteConvertedFile(todoId);
+            return ResponseEntity.ok("변환된 파일이 삭제되었습니다.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("변환 파일 삭제 실패: " + e.getMessage());
+        }
+    }
+
+
 }
 
 
