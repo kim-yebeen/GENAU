@@ -35,6 +35,19 @@ public class Todolist {
     @Column(name = "uploaded_file_path")
     private String uploadedFilePath;
 
+    // ✅ 추가: 변환 상태 및 결과 정보
+    @Column(name = "convert_status")
+    private String convertStatus;  // e.g., WAITING, SUCCESS, FAILED
+
+    @Column(name = "converted_file_url", columnDefinition = "TEXT")
+    private String convertedFileUrl;
+
+    @Column(name = "converted_at")
+    private LocalDateTime convertedAt;
+
+    @Column(name = "submitted_at")
+    private LocalDateTime submittedAt;
+
 
     public Long getTodoId() { return todoId; }
     public void setTodoId(Long todoId) { this.todoId = todoId; }
@@ -71,6 +84,22 @@ public class Todolist {
 
     public String getUploadedFilePath() { return uploadedFilePath; }
     public void setUploadedFilePath(String uploadedFilePath) { this.uploadedFilePath = uploadedFilePath; }
+
+    public String getConvertStatus() { return convertStatus; }
+    public void setConvertStatus(String convertStatus) { this.convertStatus = convertStatus; }
+
+    public String getConvertedFileUrl() { return convertedFileUrl; }
+    public void setConvertedFileUrl(String convertedFileUrl) { this.convertedFileUrl = convertedFileUrl; }
+
+    public LocalDateTime getConvertedAt() { return convertedAt; }
+    public void setConvertedAt(LocalDateTime convertedAt) { this.convertedAt = convertedAt; }
+
+    public LocalDateTime getSubmittedAt() {
+        return submittedAt;
+    }
+    public void setSubmittedAt(LocalDateTime submittedAt) {
+        this.submittedAt = submittedAt;
+    }
 }
 
 

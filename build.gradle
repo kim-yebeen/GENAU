@@ -34,11 +34,24 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+	implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+	implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.3'
+	implementation 'com.cloudconvert:cloudconvert-java:1.2.2'
+	implementation 'commons-io:commons-io:2.11.0'
 
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
 	implementation 'org.hibernate.validator:hibernate-validator:8.0.0.Final'
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+	implementation 'org.apache.pdfbox:pdfbox:2.0.29'
+	implementation 'org.apache.poi:poi:5.2.3'
+	implementation 'org.apache.poi:poi-ooxml:5.2.3'
+	implementation 'org.apache.poi:poi-scratchpad:5.2.3'
+	implementation 'org.apache.poi:poi-ooxml-lite:5.2.3'
+	implementation 'org.apache.pdfbox:pdfbox-tools:2.0.29'
 }
 
 tasks.named('test') {

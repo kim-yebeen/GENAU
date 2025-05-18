@@ -14,6 +14,9 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.Files;
+import java.io.IOException;
+import java.lang.Exception;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpHeaders;
 import java.net.URLEncoder;
@@ -184,8 +187,10 @@ public class TodolistService {
             // 4. 실제 파일 저장
             file.transferTo(filePath.toFile());
 
-            // (선택) DB에 저장
+            // DB에 저장
             todo.setUploadedFilePath(filePath.toString());
+            todo.setTodoTime(LocalDateTime.now()); // 제출 시각 저장
+            // todo.setSubmitStatus("SUBMITTED"); // 상태 관리가 필요하면
             todolistRepository.save(todo);
 
             return "파일 업로드 성공: " + filePath;
@@ -278,6 +283,56 @@ public class TodolistService {
                 .map(this::toSummaryDto)
                 .toList();
     }
+
+    public List<Todolist> getTodosByConvertStatus(String status) {
+        return todolistRepository.findAllByConvertStatus(status);
+    }
+
+    public List<Todolist> getTodosByTeamAndStatus(Long teamId, String status) {
+        return todolistRepository.findAllByTeamIdAndConvertStatus(teamId, status);
+    }
+
+    public void deleteUploadedFile(Long todoId) {
+        Todolist todo = todolistRepository.findById(todoId)
+                .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
+
+        String pathStr = todo.getUploadedFilePath();
+        if (pathStr == null || pathStr.isBlank()) {
+            throw new IllegalArgumentException("업로드된 파일 경로가 존재하지 않습니다.");
+        }
+
+        Path path = Paths.get(pathStr);
+        try {
+            Files.deleteIfExists(path);
+            todo.setUploadedFilePath(null); // DB 경로도 초기화
+            todolistRepository.save(todo);
+        } catch (IOException e) {
+            throw new RuntimeException("파일 삭제 실패: " + e.getMessage());
+        }
+    }
+
+    public void deleteConvertedFile(Long todoId) {
+        Todolist todo = todolistRepository.findById(todoId)
+                .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
+
+        String pathStr = todo.getConvertedFileUrl();
+        if (pathStr == null || pathStr.isBlank()) {
+            throw new IllegalArgumentException("변환된 파일 경로가 존재하지 않습니다.");
+        }
+
+        Path path = Paths.get(pathStr);
+        try {
+            Files.deleteIfExists(path);
+            todo.setConvertedFileUrl(null);     // 경로 초기화
+            todo.setConvertStatus(null);        // 상태 초기화
+            todo.setConvertedAt(null);          // 변환 시점 초기화
+            todolistRepository.save(todo);
+        } catch (IOException e) {
+            throw new RuntimeException("변환 파일 삭제 실패: " + e.getMessage());
+        }
+    }
+
+
 }
 
 
