@@ -125,14 +125,14 @@ public class TeamService {
     public List<TeamMemberDto> listTeamMembers(Long teamId) {
         return teammatesRepository.findAllByTeamId(teamId).stream()
                 .map(tm -> {
-                    String name = userRepository.findById(tm.getUserId())
-                            .map(u -> u.getUserName())
-                            .orElse("Unknown");
+                    User user = userRepository.findById(tm.getUserId())
+                            .orElseThrow();
                     return new TeamMemberDto(
-                            tm.getUserId(),
-                            name,
+                            user.getUserId(),
+                            user.getUserName(),
                             tm.getIsManager(),
-                            tm.getTeamParticipated()
+                            tm.getTeamParticipated(),
+                            user.getProfileImg()      // 여기서 프로필 이미지 꺼내서 넣어줍니다.
                     );
                 })
                 .toList();

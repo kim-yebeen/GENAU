@@ -4,6 +4,7 @@ import com.example.genau.todo.dto.CategoryTodoDto;
 import com.example.genau.todo.dto.TodoSummaryDto;
 import com.example.genau.todo.dto.TodolistCreateRequest;
 import com.example.genau.todo.dto.TodolistUpdateRequest; // ✅ 추가
+import com.example.genau.todo.dto.*;
 import com.example.genau.todo.entity.Todolist;
 import com.example.genau.todo.service.FileConvertService;
 import com.example.genau.todo.service.TodolistService;
@@ -198,6 +199,29 @@ public class TodolistController {
     }
 
 
+    /** 2) 이번 주(일~토) 할 일 조회 */
+    @GetMapping("/team/{teamId}/weekly")
+    public List<TodoSummaryDto> getWeekly(@PathVariable Long teamId) {
+        return todolistService.getWeeklyTodos(teamId);
+    }
+
+    /** 3)특정 카테고리 할 일 조회**/
+    @GetMapping("team/{teamId}/category/{catId}")
+    public ResponseEntity<List<TodoSummaryDto>> getByCategoryId(
+            @PathVariable Long teamId,
+            @PathVariable Long catId
+    ) {
+        return ResponseEntity.ok(
+                todolistService.getTodosByCategoryId(teamId, catId)
+        );
+    }
+
+    @GetMapping("/me/weekly")
+    public List<TeamWeeklyTodoDto> getMyWeeklyTodosByUser(
+            @RequestParam("userId") Long userId
+    ) {
+        return todolistService.getMyWeeklyTodosByUser(userId);
+    }
 }
 
 
