@@ -39,30 +39,15 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class TodolistService {
 
     private final TodolistRepository todolistRepository;
     private final CategoryRepository categoryRepository;
-    public TodolistService(TodolistRepository todolistRepository,
-                           CategoryRepository categoryRepository) {
-        this.todolistRepository   = todolistRepository;
-        this.categoryRepository   = categoryRepository;
+    private final TeammatesRepository teammatesRepository;
+    private final TeamRepository teamRepository;
 
-    private final TeammatesRepository teammatesRepository;  // 팀원 정보 조회용
-    private final TeamRepository teamRepository;       // 팀명 조회용
 
-    @Autowired
-    public TodolistService(
-            TodolistRepository todolistRepository,
-            CategoryRepository categoryRepository,
-            TeammatesRepository teammatesRepository,
-            TeamRepository teamRepository
-    ) {
-        this.todolistRepository = todolistRepository;
-        this.categoryRepository = categoryRepository;
-        this.teammatesRepository = teammatesRepository;
-        this.teamRepository      = teamRepository;
-    }
     public List<Todolist> getTodosByTeamId(Long teamId) {
         return todolistRepository.findAllByTeamId(teamId);
     }
@@ -356,7 +341,7 @@ public class TodolistService {
 
 
         // 그룹핑: catId → List<TodoSummaryDto>
-        Map<Long, List<TodoSummaryDto>> map = all.stream()
+        /*Map<Long, List<TodoSummaryDto>> map = all.stream()
                 .map(this::toSummaryDto)
                 .collect(Collectors.groupingBy(TodoSummaryDto::getCatId));
 
@@ -370,10 +355,10 @@ public class TodolistService {
                     return new CategoryTodoDto(catId, name, e.getValue());
                 })
                 .toList();
-    }
+    }*/
 
     /** 이번 주 할 일 (dueDate 오늘 ~ 7일 이내) */
-    public List<TodoSummaryDto> getWeeklyTodos(Long teamId) {
+    /*public List<TodoSummaryDto> getWeeklyTodos(Long teamId) {
         LocalDate today = LocalDate.now();
         LocalDate weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
         LocalDate weekEnd   = weekStart.plusDays(6);
@@ -402,16 +387,16 @@ public class TodolistService {
                 t.getCatId(),
                 categoryName
         );
-    }
+    }*/
 
     /**특정 카테고리만 뽑아주는 메서드**/
-    public List<TodoSummaryDto> getTodosByCategoryId(Long teamId, Long catId) {
+    /*public List<TodoSummaryDto> getTodosByCategoryId(Long teamId, Long catId) {
         return todolistRepository
                 .findAllByTeamIdAndCatId(teamId, catId)
                 .stream()
                 .map(this::toSummaryDto)
                 .toList();
-    }
+    }*/
 
     /**
      * 내 계정(userId)이 속한 모든 팀별로,
