@@ -2,6 +2,7 @@
 package com.example.genau.user.service;
 
 import com.example.genau.user.domain.User;
+import com.example.genau.user.dto.UserProfileDto;
 import com.example.genau.user.repository.UserRepository;
 import com.example.genau.user.dto.EmailRequestDto;
 import com.example.genau.user.dto.EmailVerifyDto;
@@ -26,6 +27,14 @@ public class UserService {
     private final RedisTemplate<String,String> redisTemplate;
 
     private static final String CHANGE_EMAIL_FLAG = "GENAU:EMAIL:FLAG:";
+
+    /** 0) 사용자 정보 조회 */
+    public UserProfileDto getUserProfile(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다. id=" + userId));
+        return UserProfileDto.fromEntity(user);
+    }
+
     /** 1) 이름 변경 */
     public void updateName(Long userId, String newName) {
         if (newName.length() > 50) {
