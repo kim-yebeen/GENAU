@@ -198,6 +198,7 @@ public class TodolistService {
             todo.setUploadedFilePath(filePath.toString());
             todo.setTodoTime(LocalDateTime.now()); // 제출 시각 저장
             // todo.setSubmitStatus("SUBMITTED"); // 상태 관리가 필요하면
+            todo.setSubmittedAt(LocalDateTime.now());
             todolistRepository.save(todo);
 
             return "파일 업로드 성공: " + filePath;
