@@ -4,6 +4,7 @@ import com.example.genau.team.domain.Teammates;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface TeammatesRepository extends JpaRepository<Teammates, Long> {
     // 팀 나가기용
@@ -15,4 +16,7 @@ public interface TeammatesRepository extends JpaRepository<Teammates, Long> {
     boolean existsByTeamIdAndUserId(Long teamId, Long userId);
     List<Teammates> findAllByTeamId(Long teamId);
     List<Teammates> findAllByUserId(Long userId);
+
+    Optional<Teammates> findByTeamIdAndUserId(Long teamId, Long userId);
+
 }
