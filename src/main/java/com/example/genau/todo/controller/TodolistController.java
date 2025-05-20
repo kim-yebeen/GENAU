@@ -39,7 +39,7 @@ public class TodolistController {
     }
 
     // ✅ 여기 추가: 투두 수정 API
-    @PutMapping("/{todoId}")
+    @PatchMapping("/{todoId}")
     public Todolist updateTodolist(@PathVariable Long todoId, @RequestBody TodolistUpdateRequest request) {
         return todolistService.updateTodolist(todoId, request);
     }
