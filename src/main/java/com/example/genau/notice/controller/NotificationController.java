@@ -25,15 +25,19 @@ public class NotificationController {
         return ResponseEntity.ok(list);
     }
 
-    /** 2) 개별 알림 읽음 처리 */
-    @PatchMapping("/{noticeId}/read")
-    public ResponseEntity<Map<String,Object>> markAsRead(
-            @PathVariable Long noticeId
-    ) {
+    //2) 알림 삭제 DELETE /notifications/{noticeId}
+
+    @DeleteMapping("/{noticeId}")
+    public ResponseEntity<Void> deleteNotification(@PathVariable Long noticeId) {
+        notificationService.deleteNotification(noticeId);
+        return ResponseEntity.noContent().build();
+    }
+
+    // 4) 알림 읽음 표시 PUT /notifications/{noticeId}/read
+
+    @PutMapping("/{noticeId}/read")
+    public ResponseEntity<Void> markNotificationAsRead(@PathVariable Long noticeId) {
         notificationService.markAsRead(noticeId);
-        return ResponseEntity.ok(Map.of(
-                "message",  "알림이 읽음 처리되었습니다.",
-                "noticeId", noticeId
-        ));
+        return ResponseEntity.ok().build();
     }
 }
