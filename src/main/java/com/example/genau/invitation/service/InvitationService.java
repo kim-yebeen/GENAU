@@ -3,6 +3,7 @@ package com.example.genau.invitation.service;
 import com.example.genau.invitation.domain.Invitation;
 import com.example.genau.invitation.dto.*;
 import com.example.genau.invitation.repository.InvitationRepository;
+import com.example.genau.notice.service.NotificationService;
 import com.example.genau.team.domain.Team;
 import com.example.genau.team.domain.Teammates;
 import com.example.genau.team.repository.TeamRepository;
@@ -28,6 +29,8 @@ public class InvitationService {
     private final TeammatesRepository teammatesRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+
+    private final NotificationService notificationService;
 
     /** 1) 초대 링크 생성 및 메일 발송 */
     @Transactional
@@ -72,12 +75,13 @@ public class InvitationService {
         return dto;
     }
 
+
     /** 3) 초대 수락 → teammates에 등록 */
     @Transactional
     public InviteAcceptResponseDto acceptInvitation(InviteAcceptRequestDto req) {
+        // 1) 토큰 조회 및 유효성 검사
         Invitation inv = invitationRepository.findByToken(req.getToken())
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 토큰입니다."));
-
         if (inv.isAccepted()) {
             throw new RuntimeException("이미 수락된 초대입니다.");
         }
@@ -85,29 +89,40 @@ public class InvitationService {
             throw new RuntimeException("만료된 초대입니다.");
         }
 
-        // 사용자 확인
+        // 2) 사용자 확인
         User user = userRepository.findByMail(inv.getEmail())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED, "가입되지 않은 사용자입니다."));
 
-        // 중복 가입 방지
+        // 3) 중복 가입 방지
         boolean already = teammatesRepository
                 .existsByTeamIdAndUserId(inv.getTeamId(), user.getUserId());
         if (already) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 팀원으로 등록되어 있습니다.");
         }
 
-        // teammates 레코드 생성 (isManager = false)
-        teammatesRepository.save(
-                new Teammates(null, user.getUserId(), inv.getTeamId(),
-                        LocalDateTime.now(), false)
+        // 4) teammates 레코드 생성 (isManager = false)
+        Teammates newTm = teammatesRepository.save(
+                new Teammates(
+                        null,
+                        user.getUserId(),
+                        inv.getTeamId(),
+                        LocalDateTime.now(),
+                        false
+                )
         );
 
-        // 초대 상태 업데이트
+        // 5) 초대 상태 업데이트
         inv.setAccepted(true);
         invitationRepository.save(inv);
 
-        // **팀 정보 조회 및 반환**
+        // 6) 알림 생성
+        //    → 빌더가 Integer 를 기대한다면 .intValue() 로 변환
+        notificationService.createTeamJoinNotification(
+                newTm.getTeammatesId()
+        );
+
+        // 7) 팀 정보 조회 후 응답 DTO 반환
         Team team = teamRepository.findById(inv.getTeamId())
                 .orElseThrow(() -> new RuntimeException("팀이 존재하지 않습니다."));
         return new InviteAcceptResponseDto(
@@ -116,6 +131,8 @@ public class InvitationService {
                 team.getTeamDesc()
         );
     }
+
+
 
 
 }
