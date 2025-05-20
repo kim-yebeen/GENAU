@@ -33,5 +33,9 @@ public interface TodolistRepository extends JpaRepository<Todolist, Long> {
             LocalDate end
     );
 
+    /** 내일 마감인 할 일 조회 */
+    List<Todolist> findAllByDueDate(LocalDate dueDate);
+
+
 }
 

@@ -3,6 +3,7 @@ package com.example.genau.user.controller;
 import com.example.genau.user.dto.EmailRequestDto;
 import com.example.genau.user.dto.EmailVerifyDto;
 import com.example.genau.user.dto.NameRequestDto;
+import com.example.genau.user.dto.UserProfileDto;
 import com.example.genau.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,15 @@ import static org.springframework.http.ResponseEntity.ok;
 public class UserProfileController {
 
     private final UserService userService;
+
+    /** 0) 사용자 정보 조회 */
+    @GetMapping
+    public ResponseEntity<UserProfileDto> getMyProfile(
+            @RequestParam Long userId
+    ) {
+        UserProfileDto profile = userService.getUserProfile(userId);
+        return ResponseEntity.ok(profile);
+    }
 
     /** 1) 이름 변경 */
     @PutMapping("/name")

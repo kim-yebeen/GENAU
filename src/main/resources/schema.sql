@@ -43,8 +43,8 @@ CREATE TABLE IF NOT EXISTS todolist (
     );
 
 CREATE TABLE IF NOT EXISTS notice (
-                                      notice_id      SERIAL PRIMARY KEY,
-                                      teammates_id   INT REFERENCES teammates(teammates_id) ON DELETE CASCADE,
+    notice_id      SERIAL PRIMARY KEY,
+    teammates_id   INT REFERENCES teammates(teammates_id) ON DELETE CASCADE,
     notice_type    VARCHAR(50) NOT NULL,
     reference_id   INT,
     notice_message TEXT,
@@ -63,3 +63,4 @@ CREATE TABLE IF NOT EXISTS invitation (
     expires_at      TIMESTAMP    NOT NULL,        -- 토큰 만료 시각
     accepted        BOOLEAN      NOT NULL DEFAULT FALSE
 );
+
