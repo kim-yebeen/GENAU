@@ -33,7 +33,7 @@ public class NotificationController {
         return ResponseEntity.noContent().build();
     }
 
-    // 4) 알림 읽음 표시 PUT /notifications/{noticeId}/read
+    // 3) 알림 읽음 표시 PUT /notifications/{noticeId}/read
 
     @PutMapping("/{noticeId}/read")
     public ResponseEntity<Void> markNotificationAsRead(@PathVariable Long noticeId) {

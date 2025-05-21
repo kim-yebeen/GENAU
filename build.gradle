@@ -52,6 +52,11 @@ dependencies {
 	implementation 'org.apache.poi:poi-scratchpad:5.2.3'
 	implementation 'org.apache.poi:poi-ooxml-lite:5.2.3'
 	implementation 'org.apache.pdfbox:pdfbox-tools:2.0.29'
+
+	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
 }
 
 tasks.named('test') {

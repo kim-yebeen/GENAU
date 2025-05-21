@@ -70,7 +70,8 @@ public class NotificationService {
         List<Todolist> list = todolistRepository.findAllByDueDate(tomorrow);
 
         for (Todolist t : list) {
-            // ① 이미 완료된 TODO는 건너뛰기
+            // ① 이미 완료된
+            // TODO는 건너뛰기
             if (Boolean.TRUE.equals(t.getTodoChecked())) {
                 continue;
             }

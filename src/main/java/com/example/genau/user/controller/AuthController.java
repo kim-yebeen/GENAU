@@ -1,5 +1,6 @@
 package com.example.genau.user.controller;
 
+import com.example.genau.user.security.JwtUtil;
 import com.example.genau.user.service.AuthService;
 import com.example.genau.user.dto.*;
 import com.example.genau.user.service.EmailService;
@@ -21,6 +22,7 @@ public class AuthController {
     private final com.example.genau.user.repository.UserRepository userRepository;
     private final EmailService emailService;
     private final AuthService authService;
+    private final JwtUtil jwtUtil;
 
     // 이메일 중복 확인
     @GetMapping("/check-email")
@@ -42,17 +44,7 @@ public class AuthController {
         }
     }
 
-    // 인증코드 검증
-    /*
-    @PostMapping("/verify-code")
-    public ResponseEntity<?> verifyCode(@RequestBody Map<String, String> request) {
-        String email = request.get("email");
-        String code = request.get("code");
 
-        boolean verified = emailService.verifyCode(email, code);
-        return ResponseEntity.ok(Map.of("verified", verified));
-    }
-    */
     @PostMapping("/verify-code")
     public ResponseEntity<?> verifyCode(@RequestBody EmailVerifyDto req) {
         boolean ok = emailService.verifyCode(req.getEmail(), req.getCode());
@@ -89,5 +81,43 @@ public class AuthController {
         }
     }
 
+    /**
+     * 로그아웃: 클라이언트에서 토큰을 삭제하는 방식
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<Map<String, String>> logout() {
+        return ResponseEntity.ok(authService.logout());
+    }
 
+    /**
+     * 회원탈퇴: 사용자 계정 삭제
+     * 토큰에서 사용자 ID를 추출하여 계정 삭제
+     */
+    @DeleteMapping("/withdraw")
+    public ResponseEntity<?> withdraw(@RequestHeader("Authorization") String authorization) {
+        try {
+            if (authorization == null || !authorization.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "인증 토큰이 필요합니다."));
+            }
+
+            String token = authorization.substring(7);
+
+            // 토큰 유효성 검증
+            if (!jwtUtil.validateToken(token)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "유효하지 않은 토큰입니다."));
+            }
+
+            // 토큰에서 사용자 ID 추출
+            Long userId = jwtUtil.getUserId(token);
+
+            // 회원 탈퇴 실행
+            authService.deleteAccount(userId);
+
+            return ResponseEntity.ok(Map.of("message", "회원탈퇴가 완료되었습니다."));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }

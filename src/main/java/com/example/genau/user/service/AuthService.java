@@ -5,6 +5,8 @@ import com.example.genau.user.dto.ResetPasswordRequestDto;
 import com.example.genau.user.dto.SignupRequestDto;
 import com.example.genau.user.domain.User;
 import com.example.genau.user.repository.UserRepository;
+import com.example.genau.user.security.JwtUtil;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +23,7 @@ public class AuthService {
     private final StringRedisTemplate redisTemplate;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
     // Redis key prefixes
     private static final String CODE_KEY     = "verify:";
@@ -86,7 +89,7 @@ public class AuthService {
         User user = User.builder()
                 .mail(dto.getEmail())
                 .userName(dto.getName())
-                .userPw(dto.getPassword()) // 나중에 암호화 적용
+                .userPw(passwordEncoder.encode(dto.getPassword())) // 나중에 암호화 적용
                 .build();
         userRepository.save(user);
         System.out.println("회원가입 완료: " + dto.getEmail());
@@ -100,13 +103,39 @@ public class AuthService {
     public Map<String, Object> login(LoginRequestDto dto) {
         User user = userRepository.findByMail(dto.getEmail())
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 이메일입니다."));
-        if (!user.getUserPw().equals(dto.getPassword())) {
+
+        // 암호화된 비밀번호 비교로 수정
+        if (!passwordEncoder.matches(dto.getPassword(), user.getUserPw())) {
             throw new RuntimeException("비밀번호가 일치하지 않습니다.");
         }
+
+        // JWT 토큰 생성
+        String token = jwtUtil.createToken(user.getUserId(), user.getUserName());
+
         return Map.of(
                 "message", "로그인 성공",
-                "userId",   user.getUserId(),
-                "name",     user.getUserName()
+                "userId", user.getUserId(),
+                "name", user.getUserName(),
+                "token", token
         );
+    }
+
+    /**
+     * 6) 로그아웃 - 클라이언트 측에서 토큰 삭제만 수행
+     * 서버 측에서는 특별한 처리를 하지 않음
+     */
+    public Map<String, String> logout() {
+        return Map.of("message", "로그아웃 되었습니다. 클라이언트에서 토큰을 삭제해주세요.");
+    }
+
+    /**
+     * 7) 회원탈퇴
+     */
+    @Transactional
+    public void deleteAccount(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        userRepository.delete(user);
     }
 }

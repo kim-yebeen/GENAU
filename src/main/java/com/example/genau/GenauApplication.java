@@ -15,8 +15,5 @@ public class GenauApplication {
 		SpringApplication.run(GenauApplication.class, args);
 	}
 
-	@Bean
-	public PasswordEncoder passwordEncoder() {
-		return new BCryptPasswordEncoder();
-	}
+
 }
