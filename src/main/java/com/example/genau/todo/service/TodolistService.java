@@ -46,7 +46,16 @@ public class TodolistService {
     private final CategoryRepository categoryRepository;
     private final TeammatesRepository teammatesRepository;
     private final TeamRepository teamRepository;
+
     private final NotificationService      notificationService;
+
+    private boolean isVisibleByDeadline(LocalDate dueDate) {
+        LocalDate today = LocalDate.now();
+        return dueDate != null && (
+                !dueDate.isBefore(today.minusDays(3)) // today 또는 이후이거나, 최대 3일 전까지 포함
+        );
+    }
+
 
     public List<Todolist> getTodosByTeamId(Long teamId) {
         return todolistRepository.findAllByTeamId(teamId);
@@ -70,16 +79,30 @@ public class TodolistService {
 
     // ✅ 여기 추가: 투두 수정 메서드
     public Todolist updateTodolist(Long todoId, TodolistUpdateRequest request) {
-        Optional<Todolist> optionalTodo = todolistRepository.findById(todoId);
 
-        if (optionalTodo.isEmpty()) {
-            throw new IllegalArgumentException("Todo not found with id: " + todoId);
+        Todolist todo = todolistRepository.findById(todoId)
+                .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
+
+        LocalDate today = LocalDate.now();
+        LocalDate dueDate = todo.getDueDate();
+
+        // 마감일 기준 3일 초과 시 수정 금지
+        if (dueDate != null && today.isAfter(dueDate.plusDays(3))) {
+            throw new IllegalStateException("마감일이 지난 지 3일이 넘어 수정할 수 없습니다.");
         }
 
-        Todolist todo = optionalTodo.get();
-        todo.setTodoTitle(request.getTodoTitle());
-        todo.setTodoDes(request.getTodoDes());
-        todo.setDueDate(request.getDueDate());
+        // 마감일이 지나고 3일 이내인 경우 → fileForm만 수정 허용
+        if (dueDate != null && today.isAfter(dueDate)) {
+            todo.setFileForm(request.getFileForm());
+        } else {
+            // 마감 전이라면 전체 수정 허용
+            todo.setTodoTitle(request.getTodoTitle());
+            todo.setTodoDes(request.getTodoDes());
+            todo.setDueDate(request.getDueDate());
+            todo.setFileForm(request.getFileForm());
+        }
+
+        // 수정 시간 갱신
         todo.setTodoTime(LocalDateTime.now());
 
         return todolistRepository.save(todo);
@@ -145,6 +168,11 @@ public class TodolistService {
             throw new IllegalArgumentException("이 투두는 해당 팀원에게 할당되지 않았습니다.");
         }
 
+        LocalDate today = LocalDate.now();
+        if (todo.getDueDate() != null && today.isAfter(todo.getDueDate().plusDays(3))) {
+            throw new IllegalStateException("마감일이 지난 지 3일이 지나 업로드할 수 없습니다.");
+        }
+
         if (file.isEmpty()) {
             throw new IllegalArgumentException("파일이 비어 있습니다.");
         }
@@ -196,6 +224,7 @@ public class TodolistService {
 
             // DB에 저장
             todo.setUploadedFilePath(filePath.toString());
+
             //제출 완료 처리 <--예빈 추가..
             todo.setTodoChecked(true);
 
@@ -238,14 +267,14 @@ public class TodolistService {
 
     /** 카테고리별 할 일 그룹핑 */
     public List<CategoryTodoDto> getTodosByCategory(Long teamId) {
-        List<Todolist> all = todolistRepository.findAllByTeamId(teamId);
+        List<Todolist> all = todolistRepository.findAllByTeamId(teamId).stream()
+                .filter(t -> isVisibleByDeadline(t.getDueDate()))
+                .toList();
 
-        // 그룹핑: catId → List<TodoSummaryDto>
         Map<Long, List<TodoSummaryDto>> map = all.stream()
                 .map(this::toSummaryDto)
                 .collect(Collectors.groupingBy(TodoSummaryDto::getCatId));
 
-        // DTO 로 변환
         return map.entrySet().stream()
                 .map(e -> {
                     Long catId = e.getKey();
@@ -266,9 +295,10 @@ public class TodolistService {
         return todolistRepository.findAllByTeamId(teamId).stream()
                 .filter(t -> {
                     LocalDate due = t.getDueDate();
-                    return due != null
-                            && !due.isBefore(weekStart)
-                            && !due.isAfter(weekEnd);
+                    return due != null && (
+                            (!due.isBefore(weekStart) && !due.isAfter(weekEnd))  // 기존 주간 범위
+                                    || (due.isBefore(today) && !today.isAfter(due.plusDays(3))) // 마감일 3일 후까지
+                    );
                 })
                 .map(this::toSummaryDto)
                 .toList();
@@ -294,6 +324,7 @@ public class TodolistService {
         return todolistRepository
                 .findAllByTeamIdAndCatId(teamId, catId)
                 .stream()
+                .filter(t -> isVisibleByDeadline(t.getDueDate()))
                 .map(this::toSummaryDto)
                 .toList();
     }

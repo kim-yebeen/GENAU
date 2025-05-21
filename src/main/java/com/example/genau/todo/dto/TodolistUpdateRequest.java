@@ -7,6 +7,7 @@ public class TodolistUpdateRequest {
 
     private String todoTitle;
     private String todoDes;
+    private String fileForm;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate dueDate;
@@ -34,5 +35,13 @@ public class TodolistUpdateRequest {
 
     public void setDueDate(LocalDate dueDate) {
         this.dueDate = dueDate;
+    }
+
+    public String getFileForm() {
+        return fileForm;
+    }
+
+    public void setFileForm(String fileForm) {
+        this.fileForm = fileForm;
     }
 }
