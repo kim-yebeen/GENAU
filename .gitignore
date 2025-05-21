@@ -39,3 +39,5 @@ out/
 
 
 src/main/resources/application-db.properties
+uploads/
+converted/
