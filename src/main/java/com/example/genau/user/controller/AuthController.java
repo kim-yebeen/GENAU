@@ -81,14 +81,28 @@ public class AuthController {
         }
     }
 
-    /**
-     * 로그아웃: 클라이언트에서 토큰을 삭제하는 방식
-     */
     @PostMapping("/logout")
-    public ResponseEntity<Map<String, String>> logout() {
-        return ResponseEntity.ok(authService.logout());
-    }
+    public ResponseEntity<?> logout(
+            @RequestHeader(value = "Authorization", required = false) String authorization
+    ) {
+        if (authorization == null || !authorization.startsWith("Bearer ")) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "인증 토큰이 필요합니다."));
+        }
 
+        String token = authorization.substring(7);
+        if (!jwtUtil.validateToken(token)) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "유효하지 않은 토큰입니다."));
+        }
+
+        // (선택) 서버 측에서 토큰 무효화 작업: 블랙리스트에 등록한다면 여기에 로직 추가
+        // tokenBlacklistService.blacklist(token);
+
+        return ResponseEntity.ok(Map.of("message", "로그아웃 되었습니다. 클라이언트에서 토큰을 삭제해주세요."));
+    }
     /**
      * 회원탈퇴: 사용자 계정 삭제
      * 토큰에서 사용자 ID를 추출하여 계정 삭제
