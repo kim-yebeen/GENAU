@@ -39,7 +39,7 @@ public class TodolistController {
     }
 
     // ✅ 여기 추가: 투두 수정 API
-    @PutMapping("/{todoId}")
+    @PatchMapping("/{todoId}")
     public Todolist updateTodolist(@PathVariable Long todoId, @RequestBody TodolistUpdateRequest request) {
         return todolistService.updateTodolist(todoId, request);
     }
@@ -181,7 +181,9 @@ public class TodolistController {
     }
 
 
+
     //내 이번주 할일 목록 조회
+
     @GetMapping("/me/weekly")
     public List<TeamWeeklyTodoDto> getMyWeeklyTodosByUser(
             @RequestParam("userId") Long userId
