@@ -98,15 +98,11 @@ public class AuthController {
                     .body(Map.of("error", "유효하지 않은 토큰입니다."));
         }
 
-        // (선택) 서버 측에서 토큰 무효화 작업: 블랙리스트에 등록한다면 여기에 로직 추가
-        // tokenBlacklistService.blacklist(token);
-
-        return ResponseEntity.ok(Map.of("message", "로그아웃 되었습니다. 클라이언트에서 토큰을 삭제해주세요."));
+        // 토큰을 AuthService에 전달하여 블랙리스트 처리
+        Map<String, String> response = authService.logout(token);
+        return ResponseEntity.ok(response);
     }
-    /**
-     * 회원탈퇴: 사용자 계정 삭제
-     * 토큰에서 사용자 ID를 추출하여 계정 삭제
-     */
+
     @DeleteMapping("/withdraw")
     public ResponseEntity<?> withdraw(@RequestHeader("Authorization") String authorization) {
         try {
@@ -117,17 +113,15 @@ public class AuthController {
 
             String token = authorization.substring(7);
 
-            // 토큰 유효성 검증
             if (!jwtUtil.validateToken(token)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "유효하지 않은 토큰입니다."));
             }
 
-            // 토큰에서 사용자 ID 추출
             Long userId = jwtUtil.getUserId(token);
 
-            // 회원 탈퇴 실행
-            authService.deleteAccount(userId);
+            // 토큰도 함께 전달하여 블랙리스트 처리
+            authService.deleteAccount(userId, token);
 
             return ResponseEntity.ok(Map.of("message", "회원탈퇴가 완료되었습니다."));
         } catch (Exception e) {

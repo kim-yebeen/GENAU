@@ -190,6 +190,14 @@ public class TodolistController {
     ) {
         return todolistService.getMyWeeklyTodosByUser(userId);
     }
+
+    //전체할일목록조회(내할당, 캘린더바인딩용)
+    @GetMapping("/users/{userId}/calendar-todos")
+    public ResponseEntity<List<TodoCalendarSummaryDto>> getMyCalendarTodos(
+            @PathVariable Long userId
+    ) {
+        return ResponseEntity.ok(todolistService.getMyTodosForCalendar(userId));
+    }
 }
 
 

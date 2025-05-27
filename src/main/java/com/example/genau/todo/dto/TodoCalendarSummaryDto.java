@@ -5,14 +5,12 @@ import lombok.Getter;
 
 import java.time.LocalDate;
 
-@Getter @AllArgsConstructor
-public class TodoSummaryDto {
+@Getter
+@AllArgsConstructor
+public class TodoCalendarSummaryDto {
+    private Long teamId;
     private Long todoId;
     private String todoTitle;
-    private String todoDes;
     private LocalDate dueDate;
-    private Boolean todoChecked;
-    private Long   catId;
-    private String categoryName;
-    private Long assigneeId;
+    private Boolean isMyTask; // 항상 true
 }
