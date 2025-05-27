@@ -2,6 +2,7 @@ package com.example.genau.todo.service;
 
 import com.example.genau.category.domain.Category;
 import com.example.genau.category.repository.CategoryRepository;
+import com.example.genau.storage.service.StorageService;
 import com.example.genau.todo.dto.CategoryTodoDto;
 import com.example.genau.todo.dto.TodoSummaryDto;
 import com.example.genau.todo.dto.TodolistCreateRequest;
@@ -40,12 +41,15 @@ import java.util.stream.Collectors;
 import com.example.genau.notice.service.NotificationService;
 @Service
 @RequiredArgsConstructor
+
 public class TodolistService {
 
     private final TodolistRepository todolistRepository;
     private final CategoryRepository categoryRepository;
     private final TeammatesRepository teammatesRepository;
     private final TeamRepository teamRepository;
+    private final StorageService storageService;
+
 
     private final NotificationService      notificationService;
 
@@ -233,6 +237,8 @@ public class TodolistService {
             todo.setSubmittedAt(LocalDateTime.now());
             todolistRepository.save(todo);
 
+            storageService.moveToStorageIfConfirmed(todo.getTodoId());
+
             // 완료 알림 보내기 <-- 예빈 추가
             notificationService.createTodoCompletedNotification(todoId);
 
@@ -241,6 +247,7 @@ public class TodolistService {
             throw new RuntimeException("파일 업로드 실패: " + e.getMessage());
         }
     }
+
 
     public Resource downloadFile(Long todoId) {
         Todolist todo = todolistRepository.findById(todoId)
