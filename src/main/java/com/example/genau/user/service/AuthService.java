@@ -24,6 +24,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final TokenBlacklistService tokenBlacklistService;
 
     // Redis key prefixes
     private static final String CODE_KEY     = "verify:";
@@ -120,21 +121,21 @@ public class AuthService {
         );
     }
 
-    /**
-     * 6) 로그아웃 - 클라이언트 측에서 토큰 삭제만 수행
-     * 서버 측에서는 특별한 처리를 하지 않음
-     */
-    public Map<String, String> logout() {
-        return Map.of("message", "로그아웃 되었습니다. 클라이언트에서 토큰을 삭제해주세요.");
+    // 로그아웃 메서드 수정
+    public Map<String, String> logout(String token) {
+        // 토큰을 블랙리스트에 추가
+        tokenBlacklistService.blacklistToken(token);
+        return Map.of("message", "로그아웃 되었습니다.");
     }
 
-    /**
-     * 7) 회원탈퇴
-     */
+    // 회원탈퇴 메서드에도 토큰 무효화 추가
     @Transactional
-    public void deleteAccount(Long userId) {
+    public void deleteAccount(Long userId, String token) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        // 현재 토큰을 블랙리스트에 추가
+        tokenBlacklistService.blacklistToken(token);
 
         userRepository.delete(user);
     }

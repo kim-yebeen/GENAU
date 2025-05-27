@@ -315,7 +315,8 @@ public class TodolistService {
                 t.getDueDate(),
                 t.getTodoChecked(),
                 t.getCatId(),
-                categoryName
+                categoryName,
+                t.getAssigneeId()
         );
     }
 
@@ -433,6 +434,23 @@ public class TodolistService {
                 .filter(dto -> !dto.getTodos().isEmpty())
                 .toList();
     }
+
+    public List<TodoCalendarSummaryDto> getMyTodosForCalendar(Long userId) {
+        // 1. 사용자가 속한 팀들 모두 조회 (선택사항: 팀별로만 필터링하려면)
+        // 2. todolist에서 assigneeId == userId 인 것만 필터
+        List<Todolist> myTodos = todolistRepository.findAllByAssigneeId(userId);
+
+        return myTodos.stream()
+                .map(t -> new TodoCalendarSummaryDto(
+                        t.getTeamId(),        // Todolist에 teamId 필드가 있어야 합니다.
+                        t.getTodoId(),
+                        t.getTodoTitle(),
+                        t.getDueDate(),
+                        true // 내가 담당자이므로 항상 true
+                ))
+                .toList();
+    }
+
 }
 
 
