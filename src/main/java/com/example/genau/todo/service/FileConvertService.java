@@ -85,7 +85,18 @@ public class FileConvertService {
 
             Response jobResponse = httpClient.newCall(jobRequest).execute();
             JsonNode jobJson = objectMapper.readTree(Objects.requireNonNull(jobResponse.body()).string());
-            String uploadUrl = jobJson.at("/data/tasks").get(0).get("result").get("form").get("url").asText();
+            JsonNode tasks = jobJson.at("/data/tasks");
+            if (!tasks.isArray() || tasks.isEmpty()) {
+                throw new RuntimeException("CloudConvert job 생성 실패: tasks 없음\n응답: " + jobJson.toPrettyString());
+            }
+
+            JsonNode formNode = tasks.get(0).path("result").path("form");
+            if (formNode.isMissingNode() || formNode.path("url").isMissingNode()) {
+                throw new RuntimeException("CloudConvert 응답에 업로드 form 없음\n응답: " + jobJson.toPrettyString());
+            }
+
+            String uploadUrl = formNode.get("url").asText();
+
             String jobId = jobJson.get("data").get("id").asText();
             String taskId = jobJson.at("/data/tasks").get(0).get("id").asText();
 
