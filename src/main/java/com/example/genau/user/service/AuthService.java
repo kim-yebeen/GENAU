@@ -1,7 +1,6 @@
 package com.example.genau.user.service;
 
 import com.example.genau.user.dto.LoginRequestDto;
-import com.example.genau.user.dto.ResetPasswordRequestDto;
 import com.example.genau.user.dto.SignupRequestDto;
 import com.example.genau.user.domain.User;
 import com.example.genau.user.repository.UserRepository;
@@ -50,30 +49,7 @@ public class AuthService {
         return false;
     }
 
-    /** 3) 비밀번호 재설정 */
-    public void resetPassword(ResetPasswordRequestDto dto) {
-        // 플래그 확인
-        String verified = redisTemplate.opsForValue().get(FLAG_KEY + dto.getEmail());
-        if (!"true".equals(verified)) {
-            throw new RuntimeException("이메일 인증되지 않음");
-        }
 
-        User user = userRepository.findByMail(dto.getEmail())
-                .orElseThrow(() -> new RuntimeException("해당 이메일의 유저가 존재하지 않습니다."));
-
-        // 3) 새 비밀번호 ≠ 기존 비밀번호 검증 (추가)
-        if (passwordEncoder.matches(dto.getNewPassword(), user.getUserPw())) {
-            throw new IllegalArgumentException("새 비밀번호는 이전 비밀번호와 달라야 합니다.");
-        }
-
-        // 4) 비밀번호 암호화 후 저장 (기존에 주석 처리된 부분을 활성화)
-        user.setUserPw(passwordEncoder.encode(dto.getNewPassword()));
-        userRepository.save(user);
-
-        // (선택) 키 정리
-        redisTemplate.delete(CODE_KEY + dto.getEmail());
-        redisTemplate.delete(FLAG_KEY + dto.getEmail());
-    }
 
     /** 4) 회원가입 */
     public void signup(SignupRequestDto dto) {
