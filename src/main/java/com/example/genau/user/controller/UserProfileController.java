@@ -1,9 +1,6 @@
 package com.example.genau.user.controller;
 
-import com.example.genau.user.dto.EmailRequestDto;
-import com.example.genau.user.dto.EmailVerifyDto;
-import com.example.genau.user.dto.NameRequestDto;
-import com.example.genau.user.dto.UserProfileDto;
+import com.example.genau.user.dto.*;
 import com.example.genau.user.security.AuthUtil;
 import com.example.genau.user.service.UserService;
 import jakarta.validation.Valid;
@@ -73,5 +70,17 @@ public class UserProfileController {
         Long userId = AuthUtil.getCurrentUserId();
         userService.updateEmail(userId, body.getEmail());
         return ResponseEntity.ok(Map.of("message", "이메일이 변경되었습니다."));
+    }
+
+    /** 6) 비밀번호 변경 - 인증 필요 ⭐ */
+    @PutMapping("/password")
+    public ResponseEntity<?> changePassword(@Valid @RequestBody PasswordChangeRequestDto body) {
+        try {
+            Long userId = AuthUtil.getCurrentUserId();
+            userService.changePassword(userId, body);
+            return ResponseEntity.ok(Map.of("message", "비밀번호가 성공적으로 변경되었습니다."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 }

@@ -2,14 +2,12 @@
 package com.example.genau.user.service;
 
 import com.example.genau.user.domain.User;
-import com.example.genau.user.dto.UserProfileDto;
+import com.example.genau.user.dto.*;
 import com.example.genau.user.repository.UserRepository;
-import com.example.genau.user.dto.EmailRequestDto;
-import com.example.genau.user.dto.EmailVerifyDto;
-import com.example.genau.user.dto.NameRequestDto;
 import com.example.genau.user.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,7 +23,8 @@ public class UserService {
     private final UserRepository userRepository;           // :contentReference[oaicite:0]{index=0}:contentReference[oaicite:1]{index=1}
     private final EmailService emailService;               // :contentReference[oaicite:2]{index=2}:contentReference[oaicite:3]{index=3}
     private final RedisTemplate<String,String> redisTemplate;
-
+    private final PasswordEncoder passwordEncoder;
+    
     private static final String CHANGE_EMAIL_FLAG = "GENAU:EMAIL:FLAG:";
 
     /** 0) 사용자 정보 조회 */
@@ -108,5 +107,33 @@ public class UserService {
 
         // (선택) 사용 후 플래그 정리
         redisTemplate.delete(CHANGE_EMAIL_FLAG + newEmail);
+    }
+
+    /**
+     * 로그인한 사용자의 비밀번호 변경
+     */
+    public void changePassword(Long userId, PasswordChangeRequestDto dto) {
+        // 1) 새 비밀번호와 확인 비밀번호 일치 확인
+        if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
+            throw new IllegalArgumentException("새 비밀번호와 확인 비밀번호가 일치하지 않습니다.");
+        }
+
+        // 2) 사용자 조회
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        // 3) 현재 비밀번호 확인
+        if (!passwordEncoder.matches(dto.getCurrentPassword(), user.getUserPw())) {
+            throw new IllegalArgumentException("현재 비밀번호가 올바르지 않습니다.");
+        }
+
+        // 4) 새 비밀번호가 기존 비밀번호와 다른지 확인
+        if (passwordEncoder.matches(dto.getNewPassword(), user.getUserPw())) {
+            throw new IllegalArgumentException("새 비밀번호는 이전 비밀번호와 달라야 합니다.");
+        }
+
+        // 5) 비밀번호 변경
+        user.setUserPw(passwordEncoder.encode(dto.getNewPassword()));
+        userRepository.save(user);
     }
 }
