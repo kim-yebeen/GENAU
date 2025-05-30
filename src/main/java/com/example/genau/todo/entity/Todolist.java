@@ -29,15 +29,14 @@ public class Todolist {
     private LocalDate dueDate;
     private LocalDateTime todoTime;
 
-    @Column(length = 50) // ✅ 추가
+    @Column(length = 50)
     private String fileForm; // 요구하는 파일 확장자 (예: pdf, docx)
 
     @Column(name = "uploaded_file_path")
     private String uploadedFilePath;
 
-    // ✅ 추가: 변환 상태 및 결과 정보
     @Column(name = "convert_status")
-    private String convertStatus;  // e.g., WAITING, SUCCESS, FAILED
+    private String convertStatus;
 
     @Column(name = "converted_file_url", columnDefinition = "TEXT")
     private String convertedFileUrl;
@@ -47,7 +46,6 @@ public class Todolist {
 
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
-
 
     public Long getTodoId() { return todoId; }
     public void setTodoId(Long todoId) { this.todoId = todoId; }
@@ -79,14 +77,14 @@ public class Todolist {
     public LocalDateTime getTodoTime() { return todoTime; }
     public void setTodoTime(LocalDateTime todoTime) { this.todoTime = todoTime; }
 
-    public String getFileForm() { return fileForm; } // ✅ 추가
-    public void setFileForm(String fileForm) { this.fileForm = fileForm; } // ✅ 추가
+    public String getFileForm() { return fileForm; }
+    public void setFileForm(String fileForm) { this.fileForm = fileForm; }
 
     public String getUploadedFilePath() { return uploadedFilePath; }
     public void setUploadedFilePath(String uploadedFilePath) { this.uploadedFilePath = uploadedFilePath; }
 
     public String getConvertStatus() { return convertStatus; }
-    public void setConvertStatus(String convertStatus) { this.convertStatus = convertStatus; }
+    public void setConvertStatus(String converStatus) { this.convertStatus = converStatus; }
 
     public String getConvertedFileUrl() { return convertedFileUrl; }
     public void setConvertedFileUrl(String convertedFileUrl) { this.convertedFileUrl = convertedFileUrl; }
@@ -94,12 +92,8 @@ public class Todolist {
     public LocalDateTime getConvertedAt() { return convertedAt; }
     public void setConvertedAt(LocalDateTime convertedAt) { this.convertedAt = convertedAt; }
 
-    public LocalDateTime getSubmittedAt() {
-        return submittedAt;
-    }
-    public void setSubmittedAt(LocalDateTime submittedAt) {
-        this.submittedAt = submittedAt;
-    }
+    public LocalDateTime getSubmittedAt() { return submittedAt; }
+    public void setSubmittedAt(LocalDateTime submittedAt) { this.submittedAt = submittedAt; }
 }
 
 

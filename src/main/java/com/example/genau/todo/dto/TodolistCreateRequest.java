@@ -12,8 +12,8 @@ public class TodolistCreateRequest {
     private LocalDate dueDate;
     private Long assigneeId;
     private Long creatorId;
-
     private String fileForm;
+    
     // Getter & Setter
     public Long getTeamId() { return teamId; }
     public void setTeamId(Long teamId) { this.teamId = teamId; }

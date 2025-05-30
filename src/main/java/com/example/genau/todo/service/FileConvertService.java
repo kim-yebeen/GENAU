@@ -1,7 +1,7 @@
 package com.example.genau.todo.service;
 
 import com.example.genau.todo.dto.TodolistCreateRequest;
-import com.example.genau.todo.dto.TodolistUpdateRequest; // ✅ 추가
+import com.example.genau.todo.dto.TodolistUpdateRequest;
 import com.example.genau.todo.entity.Todolist;
 import com.example.genau.todo.repository.TodolistRepository;
 import org.springframework.stereotype.Service;
@@ -107,12 +107,12 @@ public class FileConvertService {
 
             MultipartBody.Builder bodyBuilder = new MultipartBody.Builder().setType(MultipartBody.FORM);
 
-// ⚠️ form parameters를 모두 추가
+            // ⚠️ form parameters를 모두 추가
             parameters.fields().forEachRemaining(entry -> {
                 bodyBuilder.addFormDataPart(entry.getKey(), entry.getValue().asText());
             });
 
-// ⚠️ 실제 파일도 함께 전송
+            // ⚠️ 실제 파일도 함께 전송
             bodyBuilder.addFormDataPart(
                     "file",
                     file.getOriginalFilename(),
@@ -206,4 +206,3 @@ public class FileConvertService {
     }
 
 }
-

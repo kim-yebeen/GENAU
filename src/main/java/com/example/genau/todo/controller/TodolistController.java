@@ -1,13 +1,9 @@
 package com.example.genau.todo.controller;
 
-import com.example.genau.todo.dto.CategoryTodoDto;
-import com.example.genau.todo.dto.TodoSummaryDto;
-import com.example.genau.todo.dto.TodolistCreateRequest;
-import com.example.genau.todo.dto.TodolistUpdateRequest; // ✅ 추가
 import com.example.genau.todo.dto.*;
 import com.example.genau.todo.entity.Todolist;
-import com.example.genau.todo.service.FileConvertService;
 import com.example.genau.todo.service.TodolistService;
+import com.example.genau.todo.service.FileConvertService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
@@ -15,18 +11,22 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import java.util.List;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.HashMap;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+
 
 
 @RestController
 @RequestMapping("/todos")
 public class TodolistController {
 
-    private final TodolistService todolistService;
     private final FileConvertService fileConvertService;
+    private final TodolistService todolistService;
 
     public TodolistController(TodolistService todolistService, FileConvertService fileConvertService) {
         this.todolistService = todolistService;
@@ -38,12 +38,19 @@ public class TodolistController {
         return todolistService.createTodolist(request);
     }
 
-    // ✅ 여기 추가: 투두 수정 API
-    @PatchMapping("/{todoId}")
+    @GetMapping("/{todoId}")
+    public ResponseEntity<TodoDetailDto> getTodoById(@PathVariable Long todoId) {
+        TodoDetailDto detail = todolistService.getTodoDetail(todoId);
+        return ResponseEntity.ok(detail);
+    }
+    
+    // 투두 수정 API
+    @PutMapping("/{todoId}")
     public Todolist updateTodolist(@PathVariable Long todoId, @RequestBody TodolistUpdateRequest request) {
         return todolistService.updateTodolist(todoId, request);
     }
 
+    // 투두 삭제 API
     @DeleteMapping("/{todoId}")
     public void deleteTodolist(@PathVariable Long todoId) {
         todolistService.deleteTodolist(todoId);
@@ -54,15 +61,36 @@ public class TodolistController {
         return todolistService.getTodosByTeamId(teamId);
     }
 
-    // ✅ 여기 추가: 파일 검증 API
+    //투두 완료 체크
+    @PutMapping("/{todoId}/check")
+    public ResponseEntity<Void> updateTodoCheckStatus(
+            @PathVariable Long todoId,
+            @RequestBody Map<String, Boolean> body
+    ) {
+        boolean checked = body.getOrDefault("todoChecked", false);
+        todolistService.updateTodoChecked(todoId, checked);
+        return ResponseEntity.ok().build();
+    }
+
+    // 파일 검증 API
     @PostMapping("/{todoId}/verify")
     public String verifyFile(
-            @PathVariable Long todoId,
-            @RequestParam("file") MultipartFile file
+        @PathVariable Long todoId,
+        @RequestParam("file") MultipartFile file
     ) {
         return todolistService.verifyFile(todoId, file);
     }
 
+    @PostMapping("/{todoId}/file")
+    public ResponseEntity<String> uploadFile(
+        @PathVariable Long todoId,
+        @RequestParam("teammatesId") Long teammatesId,
+        @RequestParam("file") MultipartFile file
+    ) {
+        return this.submitFile(todoId, teammatesId, file);
+    }
+
+    // 여기 추가: 파일 업로드 API
     @PostMapping("/{todoId}/submit")
     public ResponseEntity<String> submitFile(
             @PathVariable Long todoId,
@@ -96,10 +124,15 @@ public class TodolistController {
     }
 
     /** 1) 카테고리별 할 일 조회 */
+    // @GetMapping("/team/{teamId}/by-category")
+    // public List<CategoryTodoDto> getByCategory(@PathVariable Long teamId) {
+    //     return todolistService.getTodosByCategory(teamId);
+    // }
     @GetMapping("/team/{teamId}/by-category")
-    public List<CategoryTodoDto> getByCategory(@PathVariable Long teamId) {
-        return todolistService.getTodosByCategory(teamId);
+    public ResponseEntity<List<CategoryTodoDto>> getTodosGroupedByCategory(@PathVariable Long teamId) {
+        return ResponseEntity.ok(todolistService.getTodosByCategory(teamId));
     }
+
 
     /** 2) 이번 주(일~토) 할 일 조회 */
     @GetMapping("/team/{teamId}/weekly")
@@ -140,7 +173,6 @@ public class TodolistController {
         }
     }
 
-
     // 전체 변환 상태별 조회
     @GetMapping("/convert/status")
     public List<Todolist> getByConvertStatus(@RequestParam("status") String status) {
@@ -179,10 +211,6 @@ public class TodolistController {
                     .body("변환 파일 삭제 실패: " + e.getMessage());
         }
     }
-
-
-
-    //내 이번주 할일 목록 조회
 
     @GetMapping("/me/weekly")
     public List<TeamWeeklyTodoDto> getMyWeeklyTodosByUser(
