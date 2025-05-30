@@ -1,8 +1,10 @@
 package com.example.genau.category.controller;
 
 import com.example.genau.category.dto.CategoryRequestDto;
+import com.example.genau.category.dto.CategoryResponseDto;
 import com.example.genau.category.dto.CategoryUpdateRequestDto;
 import com.example.genau.category.service.CategoryService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +12,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.List;
 
 @RestController
 @RequestMapping("/teams/{teamId}/categories")
@@ -17,6 +20,11 @@ import java.util.Map;
 public class CategoryController {
 
     private final CategoryService categoryService;
+
+    @GetMapping
+    public ResponseEntity<List<CategoryResponseDto>> getByTeam(@PathVariable Long teamId) {
+        return ResponseEntity.ok(categoryService.getAllByTeam(teamId));
+    }
 
     // 1) 목록 등록
     @PostMapping
