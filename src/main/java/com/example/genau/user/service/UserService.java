@@ -24,7 +24,7 @@ public class UserService {
     private final EmailService emailService;               // :contentReference[oaicite:2]{index=2}:contentReference[oaicite:3]{index=3}
     private final RedisTemplate<String,String> redisTemplate;
     private final PasswordEncoder passwordEncoder;
-    
+
     private static final String CHANGE_EMAIL_FLAG = "GENAU:EMAIL:FLAG:";
 
     /** 0) 사용자 정보 조회 */
