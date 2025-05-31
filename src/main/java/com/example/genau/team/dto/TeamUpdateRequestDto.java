@@ -7,8 +7,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class TeamUpdateRequestDto {
-    @JsonProperty("userId")
-    private Long userId;
 
     @JsonProperty("teamName")
     private String teamName;
