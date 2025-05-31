@@ -14,11 +14,16 @@ import com.example.genau.user.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -156,4 +161,49 @@ public class TeamService {
             );
         }).collect(Collectors.toList());
     }
+
+    public String uploadTeamProfileImage(Long teamId, Long userId, MultipartFile file) throws Exception {
+        // 1. 팀장 권한 체크 (기존 로직 재활용)
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 팀이 없습니다. id=" + teamId));
+
+        boolean isManager = team.getUserId().equals(userId)
+                || teammatesRepository.existsByTeamIdAndUserIdAndIsManagerTrue(teamId, userId);
+        if (!isManager) {
+            throw new AccessDeniedException("팀장만 팀 프로필 이미지를 변경할 수 있습니다.");
+        }
+
+        // 2. 파일 검증 (UserService와 동일)
+        String original = file.getOriginalFilename();
+        if (original == null || !original.contains(".")) {
+            throw new IllegalArgumentException("유효한 파일이 아닙니다.");
+        }
+
+        String ext = original.substring(original.lastIndexOf('.') + 1).toLowerCase();
+        if (!ext.matches("png|jpe?g")) {
+            throw new IllegalArgumentException("이미지는 PNG/JPG만 업로드 가능합니다.");
+        }
+
+        if (file.getSize() > 5 * 1024 * 1024) {
+            throw new IllegalArgumentException("이미지 크기는 5MB 이하로 제한됩니다.");
+        }
+
+        // 3. 팀별 동적 경로로 파일 저장
+        String dir = System.getProperty("user.dir") + "/uploads/teams/" + teamId;
+        Path uploadPath = Paths.get(dir);
+        if (Files.notExists(uploadPath)) Files.createDirectories(uploadPath);
+
+        String filename = "team_profile." + ext;
+        Path target = uploadPath.resolve(filename);
+        file.transferTo(target.toFile());
+
+        // 4. DB 업데이트
+        String url = "/uploads/teams/" + teamId + "/" + filename;
+        team.setTeamProfileImg(url);
+        team.setTeamUpdated(LocalDateTime.now());
+        teamRepository.save(team);
+
+        return url;
+    }
+
 }
