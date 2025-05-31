@@ -6,10 +6,13 @@ import com.example.genau.team.dto.TeamMemberDto;
 import com.example.genau.team.dto.TeamSummaryDto;
 import com.example.genau.team.dto.TeamUpdateRequestDto;
 import com.example.genau.team.service.TeamService;
+import com.example.genau.user.security.AuthUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -83,4 +86,17 @@ public class TeamController {
         List<TeamSummaryDto> teams = teamService.getMyTeams(userId);
         return ResponseEntity.ok(teams);
     }
+
+    //image upload
+    @PostMapping(value = "/{teamId}/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> updateTeamProfileImage(
+            @PathVariable Long teamId,
+            @RequestParam("file") MultipartFile file
+    ) throws Exception {
+        Long userId = AuthUtil.getCurrentUserId();
+        String imageUrl = teamService.uploadTeamProfileImage(teamId, userId, file);
+        return ResponseEntity.ok().body(Map.of("teamProfileImg", imageUrl));
+    }
+
+
 }
