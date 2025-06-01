@@ -26,6 +26,7 @@ public class TokenBlacklistService {
 
             // 토큰이 이미 만료되었다면 블랙리스트에 추가할 필요 없음
             if (expiration.before(now)) {
+                System.out.println("이미 만료된 토큰, 블랙리스트 등록 생략");
                 return;
             }
 
@@ -35,30 +36,25 @@ public class TokenBlacklistService {
             // 토큰을 블랙리스트에 추가 (남은 시간만큼 TTL 설정)
             String key = BLACKLIST_KEY_PREFIX + token;
             redisTemplate.opsForValue().set(key, "blacklisted", Duration.ofMillis(remainingTime));
+            System.out.println("토큰 블랙리스트 등록: " + token.substring(0, 20) + "...");
 
         } catch (Exception e) {
-            // 토큰 파싱 실패 시에도 안전하게 처리
-            // 기본 24시간으로 블랙리스트 등록
-            String key = BLACKLIST_KEY_PREFIX + token;
-            redisTemplate.opsForValue().set(key, "blacklisted", Duration.ofHours(24));
+            System.err.println("토큰 블랙리스트 처리 중 오류: " + e.getMessage());
+            // ❌ 예외 시 자동 등록하지 않음
         }
+
     }
 
     //토큰이 블랙리스트에 있는지 확인
-
     public boolean isTokenBlacklisted(String token) {
+        if (token == null || token.isBlank()) {
+            return false;
+        }
+
         String key = BLACKLIST_KEY_PREFIX + token;
-        return redisTemplate.hasKey(key);
+        String result = redisTemplate.opsForValue().get(key);
+        return redisTemplate.equals(result);
     }
 
-    /**
-     * 특정 사용자의 모든 토큰을 무효화 (회원탈퇴 시 사용)
-     * 실제로는 사용자별 토큰 추적이 필요하지만,
-     * 현재 구조에서는 개별 토큰만 처리
-     */
-    public void blacklistUserTokens(Long userId) {
-        // 현재 구조에서는 개별 토큰 추적이 어려우므로
-        // 회원탈퇴 시에는 클라이언트에서 토큰 삭제에 의존
-        // 필요시 사용자별 토큰 저장 로직을 별도로 구현해야 함
-    }
+
 }
