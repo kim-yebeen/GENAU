@@ -14,6 +14,7 @@ import com.example.genau.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -116,17 +117,22 @@ public class NotificationService {
 
     //3) 알림 삭제
 
-    public void deleteNotification(Long noticeId) {
-        if (!noticeRepository.existsById(noticeId)) {
-            throw new EntityNotFoundException("Notice not found: " + noticeId);
-        }
+    public void deleteNotification(Long noticeId, Long userId) {
+        Notice notice = noticeRepository.findById(noticeId)
+                .orElseThrow(() -> new EntityNotFoundException("Notice not found: " + noticeId));
+
+        validateNotificationOwnership(notice,userId);
+
         noticeRepository.deleteById(noticeId);
     }
 
     //4) 알림 읽음 표시
-    public void markAsRead(Long noticeId) {
+    public void markAsRead(Long noticeId, Long userId) {
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> new EntityNotFoundException("Notice not found: " + noticeId));
+        notice.setIsRead(true);
+
+        validateNotificationOwnership(notice, userId);
         notice.setIsRead(true);
         noticeRepository.save(notice);
     }
@@ -162,4 +168,13 @@ public class NotificationService {
                 .toList();
     }
 
+    private void validateNotificationOwnership(Notice notice, Long userId) {
+        // 해당 알림의 teammatesId가 현재 사용자의 것인지 확인
+        Teammates teammates = teammatesRepository.findById(notice.getTeammatesId())
+                .orElseThrow(() -> new EntityNotFoundException("Teammates not found: " + notice.getTeammatesId()));
+
+        if (!teammates.getUserId().equals(userId)) {
+            throw new AccessDeniedException("본인의 알림만 관리할 수 있습니다.");
+        }
+    }
 }
