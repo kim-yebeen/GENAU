@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -17,6 +18,13 @@ import java.util.Map;
 public class CategoryController {
 
     private final CategoryService categoryService;
+
+    // ✅ 0) 목록 조회
+    @GetMapping
+    public ResponseEntity<?> getCategories(@PathVariable Long teamId) {
+        List<?> categories = categoryService.getCategoriesByTeamId(teamId);
+        return ResponseEntity.ok(categories);
+    }
 
     // 1) 목록 등록
     @PostMapping
@@ -33,7 +41,7 @@ public class CategoryController {
         Long catId = categoryService.createCategory(dto);
         return ResponseEntity
                 .status(201)
-                .body(Map.of("message","카테고리 생성 완료","catId",catId));
+                .body(Map.of("message", "카테고리 생성 완료", "catId", catId));
     }
 
     // 2) 목록 수정
@@ -42,13 +50,13 @@ public class CategoryController {
             @PathVariable Long catId,
             @RequestBody CategoryUpdateRequestDto dto) {
         categoryService.updateCategory(catId, dto);
-        return ResponseEntity.ok(Map.of("message","카테고리명 수정 완료"));
+        return ResponseEntity.ok(Map.of("message", "카테고리명 수정 완료"));
     }
 
     // 3) 목록 삭제
     @DeleteMapping("/{catId}")
     public ResponseEntity<?> deleteCategory(@PathVariable Long catId) {
         categoryService.deleteCategory(catId);
-        return ResponseEntity.ok(Map.of("message","카테고리 삭제 완료"));
+        return ResponseEntity.ok(Map.of("message", "카테고리 삭제 완료"));
     }
 }
