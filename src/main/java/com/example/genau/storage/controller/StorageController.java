@@ -1,6 +1,7 @@
 package com.example.genau.storage.controller;
 
 import com.example.genau.storage.service.StorageService;
+import com.example.genau.user.security.AuthUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -28,7 +29,8 @@ public class StorageController {
     /** 팀별 스토리지 조회 */
     @GetMapping("/{teamId}")
     public ResponseEntity<?> listTeamFiles(@PathVariable Long teamId) throws IOException {
-        List<String> files = storageService.listFilesByTeam(teamId);
+        Long userId = AuthUtil.getCurrentUserId();
+        List<String> files = storageService.listFilesByTeam(teamId, userId);
 
         if (files.isEmpty()) {
             return ResponseEntity.ok("❗ 현재 스토리지에 저장된 파일이 없습니다.");
@@ -48,7 +50,8 @@ public class StorageController {
             @PathVariable Long teamId,
             @RequestParam("filename") String filename
     ) throws IOException {
-        Resource resource = storageService.downloadFile(teamId, filename);
+        Long userId = AuthUtil.getCurrentUserId();
+        Resource resource = storageService.downloadFile(teamId, filename, userId);
         String encoded = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
 
         return ResponseEntity.ok()
@@ -58,6 +61,14 @@ public class StorageController {
 
     @GetMapping("/team/{teamId}/todo/{todoId}")
     public ResponseEntity<Resource> downloadStoredFile(@PathVariable Long teamId, @PathVariable Long todoId) {
+        Long userId = AuthUtil.getCurrentUserId();
+        Resource resource = storageService.downloadStoredFile(teamId, todoId, userId);
+
+        String encodedName = URLEncoder.encode(resource.getFilename(), StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedName + "\"")
+                .body(resource);
+        /*
         try {
             Path folder = Paths.get(System.getProperty("user.dir"), "storage", "team-" + teamId);
             if (!Files.exists(folder)) {
@@ -78,6 +89,7 @@ public class StorageController {
         } catch (Exception e) {
             throw new RuntimeException("다운로드 실패: " + e.getMessage());
         }
+        */
     }
 
 
@@ -87,7 +99,8 @@ public class StorageController {
             @PathVariable Long teamId,
             @RequestParam("filename") String filename
     ) throws IOException {
-        storageService.deleteFile(teamId, filename);
+        Long userId = AuthUtil.getCurrentUserId();
+        storageService.deleteFile(teamId, filename, userId);
         return ResponseEntity.ok("삭제 완료: " + filename);
     }
 
