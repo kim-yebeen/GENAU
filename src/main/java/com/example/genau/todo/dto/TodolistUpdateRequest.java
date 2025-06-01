@@ -9,6 +9,11 @@ public class TodolistUpdateRequest {
     private String todoDes;
     private String fileForm;
 
+    private Long assigneeId; // ← 이 필드가 있는지 확인
+
+    // getter, setter 확인
+    public Long getAssigneeId() { return assigneeId; }
+    public void setAssigneeId(Long assigneeId) { this.assigneeId = assigneeId; }
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate dueDate;
 
