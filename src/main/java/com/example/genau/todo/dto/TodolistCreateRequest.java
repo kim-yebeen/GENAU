@@ -11,8 +11,6 @@ public class TodolistCreateRequest {
     private String todoDes;
     private LocalDate dueDate;
     private Long assigneeId;
-    private Long creatorId;
-
     private String fileForm;
     // Getter & Setter
     public Long getTeamId() { return teamId; }
@@ -36,9 +34,6 @@ public class TodolistCreateRequest {
 
     public Long getAssigneeId() { return assigneeId; } // ✅ 추가
     public void setAssigneeId(Long assigneeId) { this.assigneeId = assigneeId; }
-
-    public Long getCreatorId() { return creatorId; }
-    public void setCreatorId(Long creatorId) { this.creatorId = creatorId; }
 
     public String getFileForm() {
         return fileForm;

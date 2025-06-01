@@ -91,7 +91,7 @@ public class TeamService {
         // 3) null 아닌 필드만 덮어쓰기
         if (dto.getTeamName() != null)       team.setTeamName(dto.getTeamName());
         if (dto.getTeamDesc() != null)       team.setTeamDesc(dto.getTeamDesc());
-       
+
         // 4) 업데이트 타임스탬프
         team.setTeamUpdated(LocalDateTime.now());
         teamRepository.save(team);

@@ -1,9 +1,13 @@
 package com.example.genau.todo.service;
 
+import com.example.genau.team.domain.Team;
+import com.example.genau.team.repository.TeamRepository;
+import com.example.genau.team.repository.TeammatesRepository;
 import com.example.genau.todo.dto.TodolistCreateRequest;
 import com.example.genau.todo.dto.TodolistUpdateRequest; // ✅ 추가
 import com.example.genau.todo.entity.Todolist;
 import com.example.genau.todo.repository.TodolistRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.Resource;
@@ -44,14 +48,22 @@ public class FileConvertService {
     private final OkHttpClient httpClient = new OkHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final TodolistRepository todolistRepository;
+    private final TeamRepository teamRepository;
+    private final TeammatesRepository teammatesRepository;
+    public FileConvertService(TodolistRepository todolistRepository, TeamRepository teamRepository, TeammatesRepository teammatesRepository) {
 
-    public FileConvertService(TodolistRepository todolistRepository) {
         this.todolistRepository = todolistRepository;
+        this.teamRepository = teamRepository;
+        this.teammatesRepository = teammatesRepository;
     }
 
-    public Resource convertFile(MultipartFile file, String targetFormat, Long todoId) {
+    public Resource convertFile(MultipartFile file, String targetFormat, Long todoId, Long userId) {
+
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found: " + todoId));
+
+        // ✅ 권한 체크: 팀원만 파일 변환 가능
+        validateTeamMembership(todo.getTeamId(), userId);
 
         try {
             todo.setConvertStatus("WAITING");
@@ -165,6 +177,19 @@ public class FileConvertService {
             todo.setConvertStatus("FAILED");
             todolistRepository.save(todo);
             throw new RuntimeException("파일 변환 중 오류가 발생했습니다: " + e.getMessage(), e);
+        }
+    }
+
+    // ✅ 팀원인지 확인하는 공통 메서드 추가
+    private void validateTeamMembership(Long teamId, Long userId) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 팀이 없습니다."));
+
+        boolean isMember = team.getUserId().equals(userId)
+                || teammatesRepository.existsByTeamIdAndUserId(teamId, userId);
+
+        if (!isMember) {
+            throw new AccessDeniedException("팀원만 파일 변환을 할 수 있습니다.");
         }
     }
 
