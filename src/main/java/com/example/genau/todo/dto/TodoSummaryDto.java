@@ -15,4 +15,5 @@ public class TodoSummaryDto {
     private Long   catId;
     private String categoryName;
     private Long assigneeId;
+    private Long creatorId;  // ✅ 추가
 }

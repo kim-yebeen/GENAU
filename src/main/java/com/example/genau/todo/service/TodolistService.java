@@ -351,7 +351,8 @@ public class TodolistService {
                 t.getTodoChecked(),
                 t.getCatId(),
                 categoryName,
-                t.getAssigneeId()
+                t.getAssigneeId(),
+                t.getCreatorId()  // ✅ 추가
         );
     }
 
