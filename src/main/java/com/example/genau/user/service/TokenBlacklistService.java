@@ -17,44 +17,43 @@ public class TokenBlacklistService {
 
     private static final String BLACKLIST_KEY_PREFIX = "blacklist:token:";
 
-    //토큰을 블랙리스트에 추가토큰의 남은 만료시간만큼 Redis에 저장
     public void blacklistToken(String token) {
         try {
-            // 토큰에서 만료시간 추출
             Date expiration = jwtUtil.getExpirationDateFromToken(token);
             Date now = new Date();
 
-            // 토큰이 이미 만료되었다면 블랙리스트에 추가할 필요 없음
             if (expiration.before(now)) {
                 System.out.println("이미 만료된 토큰, 블랙리스트 등록 생략");
                 return;
             }
 
-            // 남은 시간 계산
             long remainingTime = expiration.getTime() - now.getTime();
-
-            // 토큰을 블랙리스트에 추가 (남은 시간만큼 TTL 설정)
             String key = BLACKLIST_KEY_PREFIX + token;
             redisTemplate.opsForValue().set(key, "blacklisted", Duration.ofMillis(remainingTime));
             System.out.println("토큰 블랙리스트 등록: " + token.substring(0, 20) + "...");
 
         } catch (Exception e) {
             System.err.println("토큰 블랙리스트 처리 중 오류: " + e.getMessage());
-            // ❌ 예외 시 자동 등록하지 않음
         }
-
     }
 
-    //토큰이 블랙리스트에 있는지 확인
+    // ✅ 수정된 메서드
     public boolean isTokenBlacklisted(String token) {
         if (token == null || token.isBlank()) {
             return false;
         }
 
-        String key = BLACKLIST_KEY_PREFIX + token;
-        String result = redisTemplate.opsForValue().get(key);
-        return redisTemplate.equals(result);
+        try {
+            String key = BLACKLIST_KEY_PREFIX + token;
+            String result = redisTemplate.opsForValue().get(key);
+            boolean isBlacklisted = "blacklisted".equals(result); // ✅ 올바른 비교
+
+            System.out.println("블랙리스트 확인 - 토큰: " + token.substring(0, 20) + "..., 결과: " + isBlacklisted);
+            return isBlacklisted;
+
+        } catch (Exception e) {
+            System.err.println("블랙리스트 확인 중 오류: " + e.getMessage());
+            return false; // 오류 시 false 반환 (접근 허용)
+        }
     }
-
-
 }
