@@ -1,9 +1,5 @@
 package com.example.genau.todo.controller;
 
-import com.example.genau.todo.dto.CategoryTodoDto;
-import com.example.genau.todo.dto.TodoSummaryDto;
-import com.example.genau.todo.dto.TodolistCreateRequest;
-import com.example.genau.todo.dto.TodolistUpdateRequest;
 import com.example.genau.user.security.AuthUtil;
 import com.example.genau.todo.dto.*;
 import com.example.genau.todo.entity.Todolist;
@@ -16,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import java.util.List;
+import java.util.Map;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -58,6 +55,17 @@ public class TodolistController {
     public List<Todolist> getTodosByTeamId(@PathVariable Long teamId) {
         Long userId = AuthUtil.getCurrentUserId();
         return todolistService.getTodosByTeamId(teamId, userId);
+    }
+
+    //투두 완료 체크
+    @PutMapping("/{todoId}/check")
+    public ResponseEntity<Void> updateTodoCheckStatus(
+            @PathVariable Long todoId,
+            @RequestBody Map<String, Boolean> body
+    ) {
+        boolean checked = body.getOrDefault("todoChecked", false);
+        todolistService.updateTodoChecked(todoId, checked);
+        return ResponseEntity.ok().build();
     }
 
     // file verify
@@ -153,7 +161,6 @@ public class TodolistController {
         }
     }
 
-
     // 전체 변환 상태별 조회
     @GetMapping("/convert/status")
     public List<Todolist> getByConvertStatus(@RequestParam("status") String status) {
@@ -197,10 +204,7 @@ public class TodolistController {
         }
     }
 
-
-
     //내 이번주 할일 목록 조회
-
     @GetMapping("/me/weekly")
     public List<TeamWeeklyTodoDto> getMyWeeklyTodosByUser() {
         Long userId = AuthUtil.getCurrentUserId();
@@ -214,5 +218,7 @@ public class TodolistController {
         return ResponseEntity.ok(todolistService.getMyTodosForCalendar(userId));
     }
 }
+
+
 
 

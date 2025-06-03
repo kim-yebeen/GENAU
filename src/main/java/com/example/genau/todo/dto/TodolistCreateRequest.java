@@ -38,8 +38,5 @@ public class TodolistCreateRequest {
     public String getFileForm() {
         return fileForm;
     }
-    public void setFileForm(String fileForm) {
-        this.fileForm = fileForm;
-    }
 }
 

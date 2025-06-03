@@ -3,10 +3,6 @@ package com.example.genau.todo.service;
 import com.example.genau.category.domain.Category;
 import com.example.genau.category.repository.CategoryRepository;
 import com.example.genau.storage.service.StorageService;
-import com.example.genau.todo.dto.CategoryTodoDto;
-import com.example.genau.todo.dto.TodoSummaryDto;
-import com.example.genau.todo.dto.TodolistCreateRequest;
-import com.example.genau.todo.dto.TodolistUpdateRequest; // ✅ 추가
 import com.example.genau.team.domain.Teammates;
 import com.example.genau.team.repository.TeamRepository;
 import com.example.genau.team.repository.TeammatesRepository;
@@ -32,7 +28,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Map;
-import java.util.Optional;// ✅ 추가
+import java.util.Optional;
 import java.util.List;
 import java.util.stream.Collectors;
 import com.example.genau.notice.service.NotificationService;
@@ -143,6 +139,14 @@ public class TodolistService {
         todolistRepository.deleteById(todoId);
     }
 
+    // 체크 상태(완료 여부) 업데이트
+    public void updateTodoChecked(Long todoId, boolean checked) {
+        Todolist todo = todolistRepository.findById(todoId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 투두를 찾을 수 없습니다. todoId = " + todoId));
+        todo.setTodoChecked(checked);
+        todolistRepository.save(todo);
+    }
+
     // 파일 확장자 검증 메서드
     public boolean validateFileExtension(Long todoId, MultipartFile file) {
         Todolist todo = todolistRepository.findById(todoId)
@@ -159,8 +163,6 @@ public class TodolistService {
 
         return requiredExtension.equalsIgnoreCase(submittedExtension);
     }
-
-    // ✅ TodolistService 클래스 안에 추가
 
     public String verifyFile(Long todoId, MultipartFile file) {
         Todolist todo = todolistRepository.findById(todoId)
@@ -209,7 +211,7 @@ public class TodolistService {
             throw new IllegalArgumentException("파일 이름에 확장자가 없습니다.");
         }
 
-        // ✅ 확장자 추출 및 허용 여부 검사
+        // 확장자 추출 및 허용 여부 검사
         String extension = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
         List<String> allowedExtensions = List.of(
                 "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
@@ -220,7 +222,7 @@ public class TodolistService {
             throw new IllegalArgumentException("허용되지 않은 파일 확장자입니다: " + extension);
         }
 
-        // ✅ 파일 크기 제한 검사
+        // 파일 크기 제한 검사
         long fileSizeInMB = file.getSize() / (1024 * 1024);
         boolean isMedia = List.of("mp3", "wav", "mp4", "avi", "mov").contains(extension);
 
@@ -252,7 +254,7 @@ public class TodolistService {
             // DB에 저장
             todo.setUploadedFilePath(filePath.toString());
 
-            //제출 완료 처리 <--예빈 추가..
+            //제출 완료 처리
             todo.setTodoChecked(true);
 
             todo.setTodoTime(LocalDateTime.now()); // 제출 시각 저장
@@ -262,7 +264,7 @@ public class TodolistService {
 
             storageService.moveToStorageIfConfirmed(todo.getTodoId());
 
-            // 완료 알림 보내기 <-- 예빈 추가
+            // 완료 알림 보내기
             notificationService.createTodoCompletedNotification(todoId);
 
             return "파일 업로드 성공: " + filePath;
@@ -270,7 +272,6 @@ public class TodolistService {
             throw new RuntimeException("파일 업로드 실패: " + e.getMessage());
         }
     }
-
 
     public Resource downloadFile(Long todoId, Long userId) {
         Todolist todo = todolistRepository.findById(todoId)
@@ -349,10 +350,12 @@ public class TodolistService {
                 t.getTodoDes(),
                 t.getDueDate(),
                 t.getTodoChecked(),
+                t.getFileForm(),
+                t.getUploadedFilePath(),
                 t.getCatId(),
                 categoryName,
                 t.getAssigneeId(),
-                t.getCreatorId()  // ✅ 추가
+                t.getCreatorId()
         );
     }
 
@@ -501,6 +504,11 @@ public class TodolistService {
     }
 
 }
+
+
+
+
+
 
 
 
