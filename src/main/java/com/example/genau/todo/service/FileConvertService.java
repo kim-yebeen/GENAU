@@ -1,9 +1,13 @@
 package com.example.genau.todo.service;
 
+import com.example.genau.team.domain.Team;
+import com.example.genau.team.repository.TeamRepository;
+import com.example.genau.team.repository.TeammatesRepository;
 import com.example.genau.todo.dto.TodolistCreateRequest;
-import com.example.genau.todo.dto.TodolistUpdateRequest;
+import com.example.genau.todo.dto.TodolistUpdateRequest; // ✅ 추가
 import com.example.genau.todo.entity.Todolist;
 import com.example.genau.todo.repository.TodolistRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.Resource;
@@ -44,14 +48,22 @@ public class FileConvertService {
     private final OkHttpClient httpClient = new OkHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final TodolistRepository todolistRepository;
+    private final TeamRepository teamRepository;
+    private final TeammatesRepository teammatesRepository;
+    public FileConvertService(TodolistRepository todolistRepository, TeamRepository teamRepository, TeammatesRepository teammatesRepository) {
 
-    public FileConvertService(TodolistRepository todolistRepository) {
         this.todolistRepository = todolistRepository;
+        this.teamRepository = teamRepository;
+        this.teammatesRepository = teammatesRepository;
     }
 
-    public Resource convertFile(MultipartFile file, String targetFormat, Long todoId) {
+    public Resource convertFile(MultipartFile file, String targetFormat, Long todoId, Long userId) {
+
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found: " + todoId));
+
+        // 권한 체크: 팀원만 파일 변환 가능
+        validateTeamMembership(todo.getTeamId(), userId);
 
         try {
             todo.setConvertStatus("WAITING");
@@ -107,12 +119,12 @@ public class FileConvertService {
 
             MultipartBody.Builder bodyBuilder = new MultipartBody.Builder().setType(MultipartBody.FORM);
 
-            // ⚠️ form parameters를 모두 추가
+// form parameters를 모두 추가
             parameters.fields().forEachRemaining(entry -> {
                 bodyBuilder.addFormDataPart(entry.getKey(), entry.getValue().asText());
             });
 
-            // ⚠️ 실제 파일도 함께 전송
+// 실제 파일도 함께 전송
             bodyBuilder.addFormDataPart(
                     "file",
                     file.getOriginalFilename(),
@@ -168,6 +180,19 @@ public class FileConvertService {
         }
     }
 
+    // ✅ 팀원인지 확인하는 공통 메서드 추가
+    private void validateTeamMembership(Long teamId, Long userId) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 팀이 없습니다."));
+
+        boolean isMember = team.getUserId().equals(userId)
+                || teammatesRepository.existsByTeamIdAndUserId(teamId, userId);
+
+        if (!isMember) {
+            throw new AccessDeniedException("팀원만 파일 변환을 할 수 있습니다.");
+        }
+    }
+
 
     private String pollForExportUrl(String jobId) throws IOException {
         int retries = 90;
@@ -206,3 +231,4 @@ public class FileConvertService {
     }
 
 }
+

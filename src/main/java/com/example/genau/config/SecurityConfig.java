@@ -1,3 +1,5 @@
+// SecurityConfig.java
+
 package com.example.genau.config;
 
 import com.example.genau.user.security.JwtAuthFilter;
@@ -34,8 +36,10 @@ public class SecurityConfig {
                                 "/auth/**",           // 인증 관련 (로그인, 회원가입 등)
                                 "/invitations/validate", // 초대 링크 검증
                                 "/invitations/accept",   // 초대 수락
+                                "/uploads/**",
                                 "/public/**"             // 기타 공개 경로
                         ).permitAll()
+
                         // 나머지 모든 요청은 인증 필요
                         .anyRequest().authenticated()
                 )

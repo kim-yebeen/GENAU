@@ -17,48 +17,43 @@ public class TokenBlacklistService {
 
     private static final String BLACKLIST_KEY_PREFIX = "blacklist:token:";
 
-    //토큰을 블랙리스트에 추가토큰의 남은 만료시간만큼 Redis에 저장
     public void blacklistToken(String token) {
         try {
-            // 토큰에서 만료시간 추출
             Date expiration = jwtUtil.getExpirationDateFromToken(token);
             Date now = new Date();
 
-            // 토큰이 이미 만료되었다면 블랙리스트에 추가할 필요 없음
             if (expiration.before(now)) {
+                System.out.println("이미 만료된 토큰, 블랙리스트 등록 생략");
                 return;
             }
 
-            // 남은 시간 계산
             long remainingTime = expiration.getTime() - now.getTime();
-
-            // 토큰을 블랙리스트에 추가 (남은 시간만큼 TTL 설정)
             String key = BLACKLIST_KEY_PREFIX + token;
             redisTemplate.opsForValue().set(key, "blacklisted", Duration.ofMillis(remainingTime));
+            System.out.println("토큰 블랙리스트 등록: " + token.substring(0, 20) + "...");
 
         } catch (Exception e) {
-            // 토큰 파싱 실패 시에도 안전하게 처리
-            // 기본 24시간으로 블랙리스트 등록
-            String key = BLACKLIST_KEY_PREFIX + token;
-            redisTemplate.opsForValue().set(key, "blacklisted", Duration.ofHours(24));
+            System.err.println("토큰 블랙리스트 처리 중 오류: " + e.getMessage());
         }
     }
 
-    //토큰이 블랙리스트에 있는지 확인
-
+    // ✅ 수정된 메서드
     public boolean isTokenBlacklisted(String token) {
-        String key = BLACKLIST_KEY_PREFIX + token;
-        return redisTemplate.hasKey(key);
-    }
+        if (token == null || token.isBlank()) {
+            return false;
+        }
 
-    /**
-     * 특정 사용자의 모든 토큰을 무효화 (회원탈퇴 시 사용)
-     * 실제로는 사용자별 토큰 추적이 필요하지만,
-     * 현재 구조에서는 개별 토큰만 처리
-     */
-    public void blacklistUserTokens(Long userId) {
-        // 현재 구조에서는 개별 토큰 추적이 어려우므로
-        // 회원탈퇴 시에는 클라이언트에서 토큰 삭제에 의존
-        // 필요시 사용자별 토큰 저장 로직을 별도로 구현해야 함
+        try {
+            String key = BLACKLIST_KEY_PREFIX + token;
+            String result = redisTemplate.opsForValue().get(key);
+            boolean isBlacklisted = "blacklisted".equals(result); // ✅ 올바른 비교
+
+            System.out.println("블랙리스트 확인 - 토큰: " + token.substring(0, 20) + "..., 결과: " + isBlacklisted);
+            return isBlacklisted;
+
+        } catch (Exception e) {
+            System.err.println("블랙리스트 확인 중 오류: " + e.getMessage());
+            return false; // 오류 시 false 반환 (접근 허용)
+        }
     }
 }

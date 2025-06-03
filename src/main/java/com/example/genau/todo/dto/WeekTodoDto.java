@@ -10,7 +10,7 @@ import java.time.LocalDate;
 public class WeekTodoDto {
     private Long todoId;
     private Long catId;
-    private String catName;     // Category.catName
+    private String catName;
     private Long teamId;
     private Long assigneeId;
     private String todoTitle;

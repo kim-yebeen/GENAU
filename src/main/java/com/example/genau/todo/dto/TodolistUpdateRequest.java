@@ -10,6 +10,9 @@ public class TodolistUpdateRequest {
     private String fileForm;
     private Long assigneeId;
 
+    // getter, setter 확인
+    public Long getAssigneeId() { return assigneeId; }
+    public void setAssigneeId(Long assigneeId) { this.assigneeId = assigneeId; }
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate dueDate;
 
@@ -45,14 +48,4 @@ public class TodolistUpdateRequest {
     public void setFileForm(String fileForm) {
         this.fileForm = fileForm;
     }
-
-    public Long getAssigneeId() {
-        return assigneeId;
-    }
-
-    public void setAssigneeId(Long assigneeId) {
-        this.assigneeId = assigneeId;
-    }
-
-
 }

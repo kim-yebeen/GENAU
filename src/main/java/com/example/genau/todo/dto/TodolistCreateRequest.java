@@ -11,9 +11,7 @@ public class TodolistCreateRequest {
     private String todoDes;
     private LocalDate dueDate;
     private Long assigneeId;
-    private Long creatorId;
     private String fileForm;
-    
     // Getter & Setter
     public Long getTeamId() { return teamId; }
     public void setTeamId(Long teamId) { this.teamId = teamId; }
@@ -34,17 +32,10 @@ public class TodolistCreateRequest {
     public LocalDate getDueDate() { return dueDate; }
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
 
-    public Long getAssigneeId() { return assigneeId; } // ✅ 추가
+    public Long getAssigneeId() { return assigneeId; }
     public void setAssigneeId(Long assigneeId) { this.assigneeId = assigneeId; }
 
-    public Long getCreatorId() { return creatorId; }
-    public void setCreatorId(Long creatorId) { this.creatorId = creatorId; }
-
-    public String getFileForm() {
-        return fileForm;
-    }
-    public void setFileForm(String fileForm) {
-        this.fileForm = fileForm;
-    }
+    public String getFileForm() { return fileForm; }
+    public void setFileForm(String fileForm) { this.fileForm = fileForm; }
 }
 
