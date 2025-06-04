@@ -55,6 +55,4 @@ public class TokenBlacklistService {
         String result = redisTemplate.opsForValue().get(key);
         return redisTemplate.equals(result);
     }
-
-
 }
