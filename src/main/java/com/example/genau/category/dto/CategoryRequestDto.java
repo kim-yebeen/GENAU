@@ -11,5 +11,5 @@ public class CategoryRequestDto {
     @NotBlank(message = "카테고리명(catName)은 필수입니다.")
     private String catName;
 
-
+    private String catColor = "#007bff";
 }

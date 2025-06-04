@@ -8,10 +8,12 @@ import lombok.Setter;
 public class CategoryResponseDto {
     private Long catId;
     private String catName;
+    private String catColor;
 
-    public CategoryResponseDto(Long catId, String catName) {
+    public CategoryResponseDto(Long catId, String catName, String catColor) {
         this.catId = catId;
         this.catName = catName;
+        this.catColor = catColor;
     }
 
 }

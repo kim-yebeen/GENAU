@@ -8,8 +8,7 @@ public class TodolistUpdateRequest {
     private String todoTitle;
     private String todoDes;
     private String fileForm;
-
-    private Long assigneeId; // ← 이 필드가 있는지 확인
+    private Long assigneeId;
 
     // getter, setter 확인
     public Long getAssigneeId() { return assigneeId; }
