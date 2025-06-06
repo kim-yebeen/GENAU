@@ -96,5 +96,11 @@ public class TeamController {
         return ResponseEntity.ok().body(Map.of("teamProfileImg", imageUrl));
     }
 
-
+    // 팀 프로필 이미지 삭제 (추가)
+    @DeleteMapping("/{teamId}/profile-image")
+    public ResponseEntity<?> deleteTeamProfileImage(@PathVariable Long teamId) throws Exception {
+        Long userId = AuthUtil.getCurrentUserId();
+        teamService.deleteTeamProfileImage(teamId, userId);
+        return ResponseEntity.ok().body(Map.of("message", "팀 프로필 이미지가 삭제되었습니다."));
+    }
 }
