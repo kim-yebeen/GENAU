@@ -43,6 +43,14 @@ public class UserProfileController {
         return ResponseEntity.ok().body(Map.of("imageUrl", imageUrl));
     }
 
+    /** 2-1) 프로필 이미지 삭제 - 인증 필요 (추가) */
+    @DeleteMapping("/image")
+    public ResponseEntity<?> deleteImage() throws Exception {
+        Long userId = AuthUtil.getCurrentUserId();
+        userService.deleteProfileImage(userId);
+        return ResponseEntity.ok().body(Map.of("message", "프로필 이미지가 삭제되었습니다."));
+    }
+
     /** 3) 새 이메일로 인증코드 전송 - 인증 필요 ⭐ */
     @PostMapping("/email/send-code")
     public ResponseEntity<?> sendChangeCode(@Valid @RequestBody EmailRequestDto body) throws Exception {
