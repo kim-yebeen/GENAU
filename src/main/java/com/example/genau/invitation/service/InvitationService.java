@@ -29,12 +29,35 @@ public class InvitationService {
     private final TeammatesRepository teammatesRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
-
     private final NotificationService notificationService;
 
     /** 1) 초대 링크 생성 및 메일 발송 */
     @Transactional
     public InviteCreateResponseDto createInvitation(InviteCreateRequestDto req) {
+        // 팀 존재 여부 확인
+        Team team = teamRepository.findById(req.getTeamId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "존재하지 않는 팀입니다."));
+
+        // 이미 초대된 이메일인지 확인 (미수락 상태)
+        boolean existingInvitation = invitationRepository
+                .existsByEmailAndTeamIdAndAcceptedFalse(req.getEmail(), req.getTeamId());
+        if (existingInvitation) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "이미 초대가 진행 중인 사용자입니다.");
+        }
+
+        // 이미 팀원인지 확인
+        User existingUser = userRepository.findByMail(req.getEmail()).orElse(null);
+        if (existingUser != null) {
+            boolean isAlreadyMember = teammatesRepository
+                    .existsByTeamIdAndUserId(req.getTeamId(), existingUser.getUserId());
+            if (isAlreadyMember) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT, "이미 팀원으로 등록된 사용자입니다.");
+            }
+        }
+
         String token = UUID.randomUUID().toString();
         LocalDateTime expires = LocalDateTime.now().plusDays(7);
 
@@ -49,13 +72,22 @@ public class InvitationService {
 
         invitationRepository.save(inv);
 
-        // 메일
+        // 메일 발송
         String link = "http://localhost:5173/invitations/validate?token=" + token;
         String html = """
-            <p>GENAU에 초대되었습니다!</p>
+            <p>%s 팀에 초대되었습니다!</p>
             <p><a href="%s">여기를 클릭</a>하여 팀 초대를 수락하세요.</p>
-            """.formatted(link);
-        emailService.sendHtmlMail(req.getEmail(), "[GENAU] 팀 초대", html);
+            <p>이 링크는 7일 후 만료됩니다.</p>
+            """.formatted(team.getTeamName(), link);
+
+        try {
+            emailService.sendHtmlMail(req.getEmail(), "[GENAU] " + team.getTeamName() + " 팀 초대", html);
+        } catch (Exception e) {
+            // 이메일 발송 실패 시 초대 레코드 삭제
+            invitationRepository.delete(inv);
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "이메일 발송에 실패했습니다.");
+        }
 
         return new InviteCreateResponseDto(token, expires);
     }
@@ -64,76 +96,111 @@ public class InvitationService {
     @Transactional(readOnly = true)
     public InviteValidateResponseDto validateInvitation(String token) {
         Invitation inv = invitationRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 토큰입니다."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "존재하지 않는 초대 링크입니다."));
 
         boolean valid = !inv.isAccepted() && LocalDateTime.now().isBefore(inv.getExpiresAt());
+
+        // 팀 정보도 함께 반환
+        Team team = null;
+        if (valid) {
+            team = teamRepository.findById(inv.getTeamId()).orElse(null);
+        }
 
         InviteValidateResponseDto dto = new InviteValidateResponseDto();
         dto.setValid(valid);
         dto.setTeamId(inv.getTeamId());
         dto.setEmail(inv.getEmail());
+
+        if (team != null) {
+            dto.setTeamName(team.getTeamName());
+            dto.setTeamDesc(team.getTeamDesc());
+        }
+
         return dto;
     }
-
 
     /** 3) 초대 수락 → teammates에 등록 */
     @Transactional
     public InviteAcceptResponseDto acceptInvitation(InviteAcceptRequestDto req) {
-        // 1) 토큰 조회 및 유효성 검사
+        // 1) 토큰 조회 및 기본 유효성 검사
         Invitation inv = invitationRepository.findByToken(req.getToken())
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 토큰입니다."));
-        if (inv.isAccepted()) {
-            throw new RuntimeException("이미 수락된 초대입니다.");
-        }
-        if (LocalDateTime.now().isAfter(inv.getExpiresAt())) {
-            throw new RuntimeException("만료된 초대입니다.");
-        }
-
-        // 2) 사용자 확인
-        User user = userRepository.findByMail(inv.getEmail())
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED, "가입되지 않은 사용자입니다."));
+                        HttpStatus.NOT_FOUND, "존재하지 않는 초대 링크입니다."));
 
-        // 3) 중복 가입 방지
-        boolean already = teammatesRepository
-                .existsByTeamIdAndUserId(inv.getTeamId(), user.getUserId());
-        if (already) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "이미 팀원으로 등록되어 있습니다.");
+        if (inv.isAccepted()) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "이미 수락된 초대입니다.");
         }
 
-        // 4) teammates 레코드 생성 (isManager = false)
-        Teammates newTm = teammatesRepository.save(
-                new Teammates(
-                        null,
-                        user.getUserId(),
-                        inv.getTeamId(),
-                        LocalDateTime.now(),
-                        false
-                )
+        if (LocalDateTime.now().isAfter(inv.getExpiresAt())) {
+            throw new ResponseStatusException(
+                    HttpStatus.GONE, "만료된 초대입니다.");
+        }
+
+        // 2) 사용자 검증 - 요청한 userId와 초대된 이메일이 일치하는지 확인
+        User requestUser = userRepository.findById(req.getUserId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "존재하지 않는 사용자입니다."));
+
+        // 초대된 이메일과 요청 사용자의 이메일이 일치하는지 확인
+        if (!requestUser.getMail().equals(inv.getEmail())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "초대받은 사용자만 수락할 수 있습니다.");
+        }
+
+        // 3) 중복 가입 방지 - 다시 한 번 확인
+        boolean alreadyMember = teammatesRepository
+                .existsByTeamIdAndUserId(inv.getTeamId(), requestUser.getUserId());
+        if (alreadyMember) {
+            // 이미 팀원이면 초대를 수락 처리하고 팀 정보 반환
+            inv.setAccepted(true);
+            invitationRepository.save(inv);
+
+            Team team = teamRepository.findById(inv.getTeamId())
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "팀이 존재하지 않습니다."));
+
+            return new InviteAcceptResponseDto(
+                    team.getTeamId(),
+                    team.getTeamName(),
+                    team.getTeamDesc()
+            );
+        }
+
+        // 4) 팀 존재 여부 확인
+        Team team = teamRepository.findById(inv.getTeamId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "팀이 존재하지 않습니다."));
+
+        // 5) teammates 레코드 생성
+        Teammates newTeammate = new Teammates(
+                null,
+                requestUser.getUserId(),
+                inv.getTeamId(),
+                LocalDateTime.now(),
+                false // isManager = false
         );
 
-        // 5) 초대 상태 업데이트
+        Teammates savedTeammate = teammatesRepository.save(newTeammate);
+
+        // 6) 초대 상태 업데이트
         inv.setAccepted(true);
         invitationRepository.save(inv);
 
-        // 6) 알림 생성
-        //    → 빌더가 Integer 를 기대한다면 .intValue() 로 변환
-        notificationService.createTeamJoinNotification(
-                newTm.getTeammatesId()
-        );
+        // 7) 알림 생성
+        try {
+            notificationService.createTeamJoinNotification(savedTeammate.getTeammatesId());
+        } catch (Exception e) {
+            // 알림 생성 실패는 로그만 남기고 진행
+            System.err.println("알림 생성 실패: " + e.getMessage());
+        }
 
-        // 7) 팀 정보 조회 후 응답 DTO 반환
-        Team team = teamRepository.findById(inv.getTeamId())
-                .orElseThrow(() -> new RuntimeException("팀이 존재하지 않습니다."));
         return new InviteAcceptResponseDto(
                 team.getTeamId(),
                 team.getTeamName(),
                 team.getTeamDesc()
         );
     }
-
-
-
-
 }
 
