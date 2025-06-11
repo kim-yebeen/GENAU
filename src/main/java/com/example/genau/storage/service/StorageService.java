@@ -83,72 +83,72 @@ public class StorageService {
         Path filePath = Paths.get(System.getProperty("user.dir"), "storage", "team-" + teamId, filename);
         Files.deleteIfExists(filePath);
     }
-/*
-    public void moveToStorageIfConfirmed(Long todoId) {
+    /*
+        public void moveToStorageIfConfirmed(Long todoId) {
+            Todolist todo = todolistRepository.findById(todoId)
+                    .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
+
+            LocalDate due = todo.getDueDate();
+            if (todo.getTodoChecked() && due != null && LocalDate.now().isAfter(due.plusDays(2))) {
+                String uploadedPath = todo.getUploadedFilePath();
+                if (uploadedPath == null || uploadedPath.isBlank()) return;
+
+                Path source = Paths.get(uploadedPath);
+                if (!Files.exists(source)) {
+                    System.out.println("⚠️ 업로드된 파일이 존재하지 않습니다: " + uploadedPath);
+                    return;
+                }
+                String extension = uploadedPath.substring(uploadedPath.lastIndexOf('.') + 1);
+                Path storageRoot = Paths.get(System.getProperty("user.dir"), "storage"); // 🔍 storage 폴더 경로
+                Path teamFolder = storageRoot.resolve("team-" + todo.getTeamId()); // 🔍 team-x 폴더
+                Path target = teamFolder.resolve("todo-" + todo.getTodoId() + "." + extension); // 저장 경로
+
+                try {
+                    Files.createDirectories(teamFolder);
+                    Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+                    System.out.println("✅ 스토리지로 파일 복사 완료: " + target);
+                } catch (IOException e) {
+                    throw new RuntimeException("스토리지 이동 실패: " + e.getMessage());
+                }
+            }else {
+                System.out.println("ℹ️ 조건 미충족: todoChecked=" + todo.getTodoChecked() +
+                        ", dueDate=" + due + ", today=" + LocalDate.now());
+            }
+        }
+    */
+    public void copyToStorageImmediately(Long todoId, String uploadedFilePath) {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
 
-        LocalDate due = todo.getDueDate();
-        if (todo.getTodoChecked() && due != null && LocalDate.now().isAfter(due.plusDays(2))) {
-            String uploadedPath = todo.getUploadedFilePath();
-            if (uploadedPath == null || uploadedPath.isBlank()) return;
+        if (uploadedFilePath == null || uploadedFilePath.isBlank()) {
+            return;
+        }
 
-            Path source = Paths.get(uploadedPath);
-            if (!Files.exists(source)) {
-                System.out.println("⚠️ 업로드된 파일이 존재하지 않습니다: " + uploadedPath);
-                return;
-            }
-            String extension = uploadedPath.substring(uploadedPath.lastIndexOf('.') + 1);
-            Path storageRoot = Paths.get(System.getProperty("user.dir"), "storage"); // 🔍 storage 폴더 경로
-            Path teamFolder = storageRoot.resolve("team-" + todo.getTeamId()); // 🔍 team-x 폴더
-            Path target = teamFolder.resolve("todo-" + todo.getTodoId() + "." + extension); // 저장 경로
+        Path source = Paths.get(uploadedFilePath);
+        if (!Files.exists(source)) {
+            System.out.println("⚠️ 업로드된 파일이 존재하지 않습니다: " + uploadedFilePath);
+            return;
+        }
 
-            try {
-                Files.createDirectories(teamFolder);
-                Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
-                System.out.println("✅ 스토리지로 파일 복사 완료: " + target);
-            } catch (IOException e) {
-                throw new RuntimeException("스토리지 이동 실패: " + e.getMessage());
-            }
-        }else {
-            System.out.println("ℹ️ 조건 미충족: todoChecked=" + todo.getTodoChecked() +
-                    ", dueDate=" + due + ", today=" + LocalDate.now());
+        try {
+            Path storageRoot = Paths.get(System.getProperty("user.dir"), "storage");
+            Path teamFolder = storageRoot.resolve("team-" + todo.getTeamId());
+
+            // ✅ 원본 파일명 유지 (기존 방식)
+            String originalFileName = source.getFileName().toString();
+            Path target = teamFolder.resolve(originalFileName);
+
+            // 또는 todoId 접두사만 추가하고 원본명 유지
+            // Path target = teamFolder.resolve("todo-" + todoId + "_" + originalFileName.substring(originalFileName.indexOf('_') + 1));
+
+            Files.createDirectories(teamFolder);
+            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+
+            System.out.println("✅ 원본 파일명으로 스토리지 복사 완료: " + target);
+        } catch (IOException e) {
+            throw new RuntimeException("스토리지 복사 실패: " + e.getMessage());
         }
     }
-*/
-public void copyToStorageImmediately(Long todoId, String uploadedFilePath) {
-    Todolist todo = todolistRepository.findById(todoId)
-            .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
-
-    if (uploadedFilePath == null || uploadedFilePath.isBlank()) {
-        return;
-    }
-
-    Path source = Paths.get(uploadedFilePath);
-    if (!Files.exists(source)) {
-        System.out.println("⚠️ 업로드된 파일이 존재하지 않습니다: " + uploadedFilePath);
-        return;
-    }
-
-    try {
-        Path storageRoot = Paths.get(System.getProperty("user.dir"), "storage");
-        Path teamFolder = storageRoot.resolve("team-" + todo.getTeamId());
-
-        // ✅ 원본 파일명 유지 (기존 방식)
-        String originalFileName = source.getFileName().toString();
-        Path target = teamFolder.resolve(originalFileName);
-
-        // 또는 todoId 접두사만 추가하고 원본명 유지
-        // Path target = teamFolder.resolve("todo-" + todoId + "_" + originalFileName.substring(originalFileName.indexOf('_') + 1));
-
-        Files.createDirectories(teamFolder);
-        Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
-
-        System.out.println("✅ 원본 파일명으로 스토리지 복사 완료: " + target);
-    } catch (IOException e) {
-        throw new RuntimeException("스토리지 복사 실패: " + e.getMessage());
-    }
-}
 
     public void updateStorageFile(Long todoId, String oldFilePath, String newFilePath) {
         Todolist todo = todolistRepository.findById(todoId)
@@ -245,5 +245,3 @@ public void copyToStorageImmediately(Long todoId, String uploadedFilePath) {
         }
     }
 }
-
-
