@@ -1,4 +1,3 @@
-// com.example.genau.user.service.UserService.java
 package com.example.genau.user.service;
 
 import com.example.genau.user.domain.User;
@@ -20,8 +19,8 @@ import static com.example.genau.user.service.AuthService.FLAG_KEY;
 @Service
 @RequiredArgsConstructor
 public class UserService {
-    private final UserRepository userRepository;           // :contentReference[oaicite:0]{index=0}:contentReference[oaicite:1]{index=1}
-    private final EmailService emailService;               // :contentReference[oaicite:2]{index=2}:contentReference[oaicite:3]{index=3}
+    private final UserRepository userRepository;
+    private final EmailService emailService;
     private final RedisTemplate<String,String> redisTemplate;
     private final PasswordEncoder passwordEncoder;
 
@@ -77,6 +76,31 @@ public class UserService {
         userRepository.save(user);
 
         return url;
+    }
+
+    /** 2-1) 프로필 이미지 삭제 (추가) */
+    public void deleteProfileImage(Long userId) throws Exception {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다. id=" + userId));
+        String profileImg = user.getProfileImg();
+        if (profileImg != null && !profileImg.isBlank()) {
+            // 파일 경로 추출
+            String dir = System.getProperty("user.dir");
+            String filePath;
+            if (profileImg.startsWith("/")) {
+                filePath = dir + profileImg;
+            } else {
+                filePath = dir + "/" + profileImg;
+            }
+            Path path = Paths.get(filePath);
+            try {
+                Files.deleteIfExists(path);
+            } catch (Exception e) {
+                // 파일이 없어도 무시
+            }
+            user.setProfileImg(null);
+            userRepository.save(user);
+        }
     }
 
     /** 1) 전송 */
@@ -137,3 +161,4 @@ public class UserService {
         userRepository.save(user);
     }
 }
+

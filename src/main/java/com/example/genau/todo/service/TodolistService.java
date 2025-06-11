@@ -32,9 +32,9 @@ import java.util.Optional;
 import java.util.List;
 import java.util.stream.Collectors;
 import com.example.genau.notice.service.NotificationService;
+
 @Service
 @RequiredArgsConstructor
-
 public class TodolistService {
 
     private final TodolistRepository todolistRepository;
@@ -47,17 +47,15 @@ public class TodolistService {
     private boolean isVisibleByDeadline(LocalDate dueDate) {
         LocalDate today = LocalDate.now();
         return dueDate != null && (
-                !dueDate.isBefore(today.minusDays(3)) // today 또는 이후이거나, 최대 3일 전까지 포함
+                !dueDate.isBefore(today.minusDays(3))
         );
     }
-
 
     public List<Todolist> getTodosByTeamId(Long teamId, Long userId) {
         validateTeamMembership(teamId, userId);
         return todolistRepository.findAllByTeamId(teamId);
     }
 
-    // 팀원인지 확인하는 공통 메서드
     private void validateTeamMembership(Long teamId, Long userId) {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 팀이 없습니다."));
@@ -70,10 +68,7 @@ public class TodolistService {
         }
     }
 
-    // todolist 등록
     public Todolist createTodolist(TodolistCreateRequest request, Long userId) {
-
-        // 팀원인지 확인
         validateTeamMembership(request.getTeamId(), userId);
 
         Todolist todo = new Todolist();
@@ -91,13 +86,11 @@ public class TodolistService {
         return todolistRepository.save(todo);
     }
 
-    //  투두 수정 메서드
     public Todolist updateTodolist(Long todoId, TodolistUpdateRequest request, Long userId) {
 
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
 
-        // 생성자이거나 담당자인지 확인
         if (!todo.getCreatorId().equals(userId) && !todo.getAssigneeId().equals(userId)) {
             throw new AccessDeniedException("TODO 생성자 또는 담당자만 수정할 수 있습니다.");
         }
@@ -105,16 +98,13 @@ public class TodolistService {
         LocalDate today = LocalDate.now();
         LocalDate dueDate = todo.getDueDate();
 
-        // 마감일 기준 3일 초과 시 수정 금지
         if (dueDate != null && today.isAfter(dueDate.plusDays(3))) {
             throw new IllegalStateException("마감일이 지난 지 3일이 넘어 수정할 수 없습니다.");
         }
 
-        // 마감일이 지나고 3일 이내인 경우 → fileForm만 수정 허용
         if (dueDate != null && today.isAfter(dueDate)) {
             todo.setFileForm(request.getFileForm());
         } else {
-            // 마감 전이라면 전체 수정 허용
             todo.setTodoTitle(request.getTodoTitle());
             todo.setTodoDes(request.getTodoDes());
             todo.setDueDate(request.getDueDate());
@@ -122,13 +112,11 @@ public class TodolistService {
             todo.setAssigneeId(request.getAssigneeId());
         }
 
-        // 수정 시간 갱신
         todo.setTodoTime(LocalDateTime.now());
 
         return todolistRepository.save(todo);
     }
 
-    // delete todo
     public void deleteTodolist(Long todoId, Long userId) {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
@@ -139,12 +127,18 @@ public class TodolistService {
         todolistRepository.deleteById(todoId);
     }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
     public Todolist updateTodolistWithFile(Long todoId, TodolistUpdateRequest request, Long userId, MultipartFile newFile) {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
 
+<<<<<<< HEAD
         // 권한 체크
+=======
+>>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
         if (!todo.getCreatorId().equals(userId) && !todo.getAssigneeId().equals(userId)) {
             throw new AccessDeniedException("TODO 생성자 또는 담당자만 수정할 수 있습니다.");
         }
@@ -160,19 +154,28 @@ public class TodolistService {
             String oldFilePath = todo.getUploadedFilePath();
 
             try {
+<<<<<<< HEAD
                 // ✅ 1. 먼저 스토리지에서 기존 파일 삭제 (새 파일 업로드 전에)
+=======
+>>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
                 if (oldFilePath != null && !oldFilePath.isBlank()) {
                     storageService.deleteOldTodoFiles(todoId, oldFilePath);
                 }
 
+<<<<<<< HEAD
                 // ✅ 2. uploads 폴더에서도 기존 파일 삭제
+=======
+>>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
                 if (oldFilePath != null && !oldFilePath.isBlank()) {
                     java.nio.file.Path oldFile = java.nio.file.Paths.get(oldFilePath);
                     java.nio.file.Files.deleteIfExists(oldFile);
                     System.out.println("기존 uploads 파일 삭제: " + oldFile);
                 }
 
+<<<<<<< HEAD
                 // ✅ 3. 새 파일 업로드
+=======
+>>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
                 String uploadDir = System.getProperty("user.dir") + "/uploads";
                 java.nio.file.Path uploadPath = java.nio.file.Paths.get(uploadDir);
 
@@ -184,12 +187,23 @@ public class TodolistService {
                 java.nio.file.Path filePath = uploadPath.resolve(fileName);
                 newFile.transferTo(filePath.toFile());
 
+<<<<<<< HEAD
                 // ✅ 4. DB 업데이트
                 todo.setUploadedFilePath(filePath.toString());
                 todo.setTodoTime(LocalDateTime.now());
                 todolistRepository.save(todo);
 
                 // ✅ 5. 새 파일을 스토리지에 복사
+=======
+                todo.setUploadedFilePath(filePath.toString());
+                todo.setTodoTime(LocalDateTime.now());
+
+                boolean hasFile = todo.getUploadedFilePath() != null && !todo.getUploadedFilePath().isBlank();
+                todo.setTodoChecked(hasFile);
+
+                todolistRepository.save(todo);
+
+>>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
                 storageService.copyToStorageImmediately(todoId, filePath.toString());
 
             } catch (Exception e) {
@@ -197,7 +211,10 @@ public class TodolistService {
             }
         }
 
+<<<<<<< HEAD
         // 다른 필드 업데이트가 있는 경우에만 기존 메서드 호출
+=======
+>>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
         if (request != null && hasNonNullFields(request)) {
             return updateTodolist(todoId, request, userId);
         }
@@ -205,7 +222,10 @@ public class TodolistService {
         return todo;
     }
 
+<<<<<<< HEAD
     // ✅ request에 null이 아닌 필드가 있는지 확인하는 헬퍼 메서드
+=======
+>>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
     private boolean hasNonNullFields(TodolistUpdateRequest request) {
         return request.getTodoTitle() != null ||
                 request.getTodoDes() != null ||
@@ -214,8 +234,11 @@ public class TodolistService {
                 request.getAssigneeId() != null;
     }
 
+<<<<<<< HEAD
 
     // 체크 상태(완료 여부) 업데이트
+=======
+>>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
     public void updateTodoChecked(Long todoId, boolean checked) {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 투두를 찾을 수 없습니다. todoId = " + todoId));
@@ -223,12 +246,11 @@ public class TodolistService {
         todolistRepository.save(todo);
     }
 
-    // 파일 확장자 검증 메서드
     public boolean validateFileExtension(Long todoId, MultipartFile file) {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
 
-        String requiredExtension = todo.getFileForm(); // 요구하는 확장자 (ex: "pdf")
+        String requiredExtension = todo.getFileForm();
         String originalFilename = file.getOriginalFilename();
 
         if (originalFilename == null || !originalFilename.contains(".")) {
@@ -244,7 +266,7 @@ public class TodolistService {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
 
-        String requiredExtension = todo.getFileForm(); // 요구하는 확장자 (ex: "pdf")
+        String requiredExtension = todo.getFileForm();
 
         if (requiredExtension == null || requiredExtension.isBlank()) {
             throw new IllegalArgumentException("요구하는 파일 확장자가 지정되지 않았습니다.");
@@ -287,7 +309,6 @@ public class TodolistService {
             throw new IllegalArgumentException("파일 이름에 확장자가 없습니다.");
         }
 
-        // 확장자 추출 및 허용 여부 검사
         String extension = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
         List<String> allowedExtensions = List.of(
                 "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
@@ -298,7 +319,6 @@ public class TodolistService {
             throw new IllegalArgumentException("허용되지 않은 파일 확장자입니다: " + extension);
         }
 
-        // 파일 크기 제한 검사
         long fileSizeInMB = file.getSize() / (1024 * 1024);
         boolean isMedia = List.of("mp3", "wav", "mp4", "avi", "mov").contains(extension);
 
@@ -309,39 +329,37 @@ public class TodolistService {
         }
 
         try {
-            //String originalFilename = file.getOriginalFilename();
-
-            // 1. 프로젝트 루트 기준으로 절대경로 설정
             String uploadDir = System.getProperty("user.dir") + "/uploads";
             java.nio.file.Path uploadPath = java.nio.file.Paths.get(uploadDir);
 
-            // 2. uploads 폴더 없으면 생성
             if (!java.nio.file.Files.exists(uploadPath)) {
                 java.nio.file.Files.createDirectories(uploadPath);
             }
 
+<<<<<<< HEAD
             /// ✅ 3. 원본 파일명 그대로 사용 (todoId 제거)
+=======
+>>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
             String fileName = originalFilename;
             java.nio.file.Path filePath = uploadPath.resolve(fileName);
 
-            // 4. 실제 파일 저장
             file.transferTo(filePath.toFile());
 
-            // DB에 저장
             todo.setUploadedFilePath(filePath.toString());
 
-            //제출 완료 처리
-            todo.setTodoChecked(true);
+            boolean hasFile = todo.getUploadedFilePath() != null && !todo.getUploadedFilePath().isBlank();
+            todo.setTodoChecked(hasFile);
 
-            todo.setTodoTime(LocalDateTime.now()); // 제출 시각 저장
-            // todo.setSubmitStatus("SUBMITTED"); // 상태 관리가 필요하면
+            todo.setTodoTime(LocalDateTime.now());
             todo.setSubmittedAt(LocalDateTime.now());
             todolistRepository.save(todo);
 
+<<<<<<< HEAD
             //storageService.moveToStorageIfConfirmed(todo.getTodoId());
+=======
+>>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
             storageService.copyToStorageImmediately(todo.getTodoId(), filePath.toString());
 
-            // 완료 알림 보내기
             notificationService.createTodoCompletedNotification(todoId);
 
             return "파일 업로드 성공: " + filePath;
@@ -374,7 +392,6 @@ public class TodolistService {
         }
     }
 
-    /** 카테고리별 할 일 그룹핑 */
     public List<CategoryTodoDto> getTodosByCategory(Long teamId, Long userId) {
         validateTeamMembership(teamId, userId);
 
@@ -397,7 +414,6 @@ public class TodolistService {
                 .toList();
     }
 
-    /** 이번 주 할 일 (dueDate 오늘 ~ 7일 이내) */
     public List<TodoSummaryDto> getWeeklyTodos(Long teamId, Long userId) {
         validateTeamMembership(teamId, userId);
 
@@ -409,8 +425,8 @@ public class TodolistService {
                 .filter(t -> {
                     LocalDate due = t.getDueDate();
                     return due != null && (
-                            (!due.isBefore(weekStart) && !due.isAfter(weekEnd))  // 기존 주간 범위
-                                    || (due.isBefore(today) && !today.isAfter(due.plusDays(3))) // 마감일 3일 후까지
+                            (!due.isBefore(weekStart) && !due.isAfter(weekEnd))
+                                    || (due.isBefore(today) && !today.isAfter(due.plusDays(3)))
                     );
                 })
                 .map(this::toSummaryDto)
@@ -436,7 +452,6 @@ public class TodolistService {
         );
     }
 
-    /**특정 카테고리만 뽑아주는 메서드**/
     public List<TodoSummaryDto> getTodosByCategoryId(Long teamId, Long catId, Long userId) {
         validateTeamMembership(teamId, userId);
         return todolistRepository
@@ -458,6 +473,7 @@ public class TodolistService {
         return todolistRepository.findAllByTeamIdAndConvertStatus(teamId, status);
     }
 
+    // ✅ 파일 삭제 시 스토리지 파일도 함께 삭제 (여기만 추가)
     public void deleteUploadedFile(Long todoId, Long userId) {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
@@ -474,7 +490,14 @@ public class TodolistService {
         Path path = Paths.get(pathStr);
         try {
             Files.deleteIfExists(path);
-            todo.setUploadedFilePath(null); // DB 경로도 초기화
+
+            // ✅ 스토리지 파일도 삭제 (이 한 줄만 추가)
+            storageService.deleteOldTodoFiles(todoId, pathStr);
+
+            todo.setUploadedFilePath(null);
+            boolean hasFile = todo.getUploadedFilePath() != null && !todo.getUploadedFilePath().isBlank();
+            todo.setTodoChecked(hasFile);
+
             todolistRepository.save(todo);
         } catch (IOException e) {
             throw new RuntimeException("파일 삭제 실패: " + e.getMessage());
@@ -485,7 +508,6 @@ public class TodolistService {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
 
-        // 담당자인지 확인
         if (!todo.getAssigneeId().equals(userId)) {
             throw new AccessDeniedException("TODO 담당자만 변환된 파일을 삭제할 수 있습니다.");
         }
@@ -498,28 +520,20 @@ public class TodolistService {
         Path path = Paths.get(pathStr);
         try {
             Files.deleteIfExists(path);
-            todo.setConvertedFileUrl(null);     // 경로 초기화
-            todo.setConvertStatus(null);        // 상태 초기화
-            todo.setConvertedAt(null);          // 변환 시점 초기화
+            todo.setConvertedFileUrl(null);
+            todo.setConvertStatus(null);
+            todo.setConvertedAt(null);
             todolistRepository.save(todo);
         } catch (IOException e) {
             throw new RuntimeException("변환 파일 삭제 실패: " + e.getMessage());
         }
     }
 
-
-
-    /**
-     * 내 계정(userId)이 속한 모든 팀별로,
-     * 이번 주(일요일~토요일)에 나(teammatesId)에게 할당된
-     * TODO 목록을 카테고리명과 함께 반환
-     */
     public List<TeamWeeklyTodoDto> getMyWeeklyTodosByUser(Long userId) {
         LocalDate today     = LocalDate.now();
         LocalDate weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
         LocalDate weekEnd   = weekStart.plusDays(6);
 
-        // 1) 내가 속한 팀 목록 조회
         List<Teammates> myTeams = teammatesRepository.findAllByUserId(userId);
 
         return myTeams.stream()
@@ -527,14 +541,12 @@ public class TodolistService {
                     Long teamId     = tm.getTeamId();
                     Long assigneeId = tm.getTeammatesId();
 
-                    // 2) 팀·담당자·기간으로 TODO 조회
                     List<WeekTodoDto> todos = todolistRepository
                             .findAllByTeamIdAndAssigneeIdAndDueDateBetween(
                                     teamId, userId, weekStart, weekEnd
                             )
                             .stream()
                             .map(t -> {
-                                // 카테고리명 조회
                                 String catName = categoryRepository.findById(t.getCatId())
                                         .map(Category::getCatName)
                                         .orElse("Unknown");
@@ -552,42 +564,30 @@ public class TodolistService {
                             })
                             .toList();
 
-                    // 3) 팀명 조회
                     String teamName = teamRepository.findById(teamId)
                             .map(Team::getTeamName)
                             .orElse("Unknown");
 
                     return new TeamWeeklyTodoDto(teamId, teamName, todos);
                 })
-                // 4) TODO가 하나도 없는 팀은 제외
                 .filter(dto -> !dto.getTodos().isEmpty())
                 .toList();
     }
 
     public List<TodoCalendarSummaryDto> getMyTodosForCalendar(Long userId) {
-        // 1. 사용자가 속한 팀들 모두 조회 (선택사항: 팀별로만 필터링하려면)
-        // 2. todolist에서 assigneeId == userId 인 것만 필터
         List<Todolist> myTodos = todolistRepository.findAllByAssigneeId(userId);
 
         return myTodos.stream()
                 .map(t -> new TodoCalendarSummaryDto(
-                        t.getTeamId(),        // Todolist에 teamId 필드가 있어야 합니다.
+                        t.getTeamId(),
                         t.getTodoId(),
                         t.getTodoTitle(),
                         t.getDueDate(),
-                        true // 내가 담당자이므로 항상 true
+                        true
                 ))
                 .toList();
     }
 
 }
-
-
-
-
-
-
-
-
 
 
