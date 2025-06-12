@@ -30,6 +30,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Map;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import com.example.genau.notice.service.NotificationService;
 
@@ -104,34 +105,41 @@ public class TodolistService {
             throw new IllegalStateException("마감일이 지난 지 3일이 넘어 수정할 수 없습니다.");
         }
 
-        // DB 업데이트 전에 변경될 제목을 임시 저장
         String oldTitle = todo.getTodoTitle();
-        String newTitle = request.getTodoTitle() != null ? request.getTodoTitle() : oldTitle;
+        LocalDate oldDueDate = todo.getDueDate();
 
         if (dueDate != null && today.isAfter(dueDate)) {
-            todo.setFileForm(request.getFileForm());
+            if (request.getFileForm() != null) todo.setFileForm(request.getFileForm());
         } else {
-            todo.setTodoTitle(request.getTodoTitle());
-            todo.setTodoDes(request.getTodoDes());
-            todo.setDueDate(request.getDueDate());
-            todo.setFileForm(request.getFileForm());
-            todo.setAssigneeId(request.getAssigneeId());
+            if (request.getTodoTitle() != null) todo.setTodoTitle(request.getTodoTitle());
+            if (request.getTodoDes() != null) todo.setTodoDes(request.getTodoDes());
+            if (request.getDueDate() != null) todo.setDueDate(request.getDueDate());
+            if (request.getFileForm() != null) todo.setFileForm(request.getFileForm());
+            if (request.getAssigneeId() != null) todo.setAssigneeId(request.getAssigneeId());
         }
 
         todo.setTodoTime(LocalDateTime.now());
-
         Todolist savedTodo = todolistRepository.save(todo);
 
-        if (request.getTodoTitle() != null) {
+        // ✅ 웹소켓 브로드캐스트 (제목과 날짜 모두 포함)
+        boolean titleChanged = !Objects.equals(oldTitle, savedTodo.getTodoTitle());
+        boolean dateChanged = !Objects.equals(oldDueDate, savedTodo.getDueDate());
+
+        if (titleChanged || dateChanged) {
             String message = String.format(
-                    "{\"type\":\"TODO_UPDATED\", \"todoId\":%d, \"newTitle\":\"%s\"}",
-                    savedTodo.getTodoId(), savedTodo.getTodoTitle()
+                    "{\"type\":\"TODO_UPDATED\", \"todoId\":%d, \"newTitle\":\"%s\", \"newDueDate\":\"%s\"}",
+                    savedTodo.getTodoId(),
+                    savedTodo.getTodoTitle(),
+                    savedTodo.getDueDate() != null ? savedTodo.getDueDate().toString() : null
             );
             todoUpdateHandler.broadcast(message);
+
+            System.out.println("📤 TODO 업데이트 브로드캐스트: " + message);
         }
 
-        return savedTodo; // ✅ 중복 save() 제거
+        return savedTodo;
     }
+    
 
     public void deleteTodolist(Long todoId, Long userId) {
         Todolist todo = todolistRepository.findById(todoId)
