@@ -4,6 +4,7 @@ import com.example.genau.notice.dto.NotificationDto;
 import com.example.genau.notice.service.NotificationService;
 import com.example.genau.user.security.AuthUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +18,7 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
+
     /** 1) 내 모든 알림 조회 */
     @GetMapping
     public ResponseEntity<List<NotificationDto>> getNotifications(){
@@ -27,10 +29,15 @@ public class NotificationController {
 
     //2) 알림 삭제 DELETE /notifications/{noticeId}
     @DeleteMapping("/{noticeId}")
-    public ResponseEntity<Void> deleteNotification(@PathVariable Long noticeId) {
-        Long userId = AuthUtil.getCurrentUserId();
-        notificationService.deleteNotification(noticeId, userId);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<Void> deleteNotification(
+            @PathVariable Long noticeId,
+            @RequestParam Long userId) {
+        try {
+            notificationService.deleteNotification(noticeId, userId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     // 3) 알림 읽음 표시 PUT /notifications/{noticeId}/read

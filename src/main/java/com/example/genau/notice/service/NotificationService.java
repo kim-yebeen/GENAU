@@ -126,21 +126,27 @@ public class NotificationService {
         }
     }
 
-    // 3) 알림 삭제 (웹소켓 브로드캐스트 추가)
+    // ✅ 알림 삭제 시 웹소켓 브로드캐스트 추가
     public void deleteNotification(Long noticeId, Long userId) {
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> new EntityNotFoundException("Notice not found: " + noticeId));
 
         validateNotificationOwnership(notice, userId);
+
+        // 삭제 전에 현재 카운트 계산
+        long currentCount = getUnreadCountByUser(userId);
+
         noticeRepository.deleteById(noticeId);
 
-        // ✅ 웹소켓으로 실시간 카운트 업데이트 전송
+        // ✅ 삭제 후 새로운 카운트 계산 및 웹소켓 브로드캐스트
         long newCount = getUnreadCountByUser(userId);
         String message = String.format(
                 "{\"type\":\"NOTIFICATION_COUNT_UPDATED\", \"userId\":%d, \"unreadCount\":%d}",
                 userId, newCount
         );
         notificationUpdateHandler.broadcast(message);
+
+        System.out.println("🗑️ 알림 삭제 완료 - 이전 카운트: " + currentCount + ", 새 카운트: " + newCount);
     }
 
 
