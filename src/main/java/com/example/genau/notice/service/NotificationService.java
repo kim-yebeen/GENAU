@@ -177,4 +177,16 @@ public class NotificationService {
             throw new AccessDeniedException("본인의 알림만 관리할 수 있습니다.");
         }
     }
+
+    public long getUnreadCountByUser(Long userId) {
+        List<Long> tmIds = teammatesRepository.findAllByUserId(userId)
+                .stream()
+                .map(Teammates::getTeammatesId)
+                .toList();
+
+        if (tmIds.isEmpty()) return 0L;
+
+        return noticeRepository.countByTeammatesIdInAndIsReadFalse(tmIds);
+    }
+
 }

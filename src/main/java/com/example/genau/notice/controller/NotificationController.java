@@ -40,4 +40,13 @@ public class NotificationController {
         notificationService.markAsRead(noticeId, userId);
         return ResponseEntity.ok().build();
     }
+
+    // GET /notifications/unread-count
+    @GetMapping("/unread-count")
+    public ResponseEntity<Long> getUnreadCount() {
+        Long userId = AuthUtil.getCurrentUserId();
+        long count = notificationService.getUnreadCountByUser(userId);
+        return ResponseEntity.ok(count);
+    }
+
 }
