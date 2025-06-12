@@ -1,9 +1,5 @@
 package com.example.genau.todo.controller;
 
-import com.example.genau.todo.dto.CategoryTodoDto;
-import com.example.genau.todo.dto.TodoSummaryDto;
-import com.example.genau.todo.dto.TodolistCreateRequest;
-import com.example.genau.todo.dto.TodolistUpdateRequest;
 import com.example.genau.user.security.AuthUtil;
 import com.example.genau.todo.dto.*;
 import com.example.genau.todo.entity.Todolist;
@@ -11,11 +7,13 @@ import com.example.genau.todo.service.FileConvertService;
 import com.example.genau.todo.service.TodolistService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import java.util.List;
+import java.util.Map;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -58,6 +56,17 @@ public class TodolistController {
     public List<Todolist> getTodosByTeamId(@PathVariable Long teamId) {
         Long userId = AuthUtil.getCurrentUserId();
         return todolistService.getTodosByTeamId(teamId, userId);
+    }
+
+    //투두 완료 체크
+    @PutMapping("/{todoId}/check")
+    public ResponseEntity<Void> updateTodoCheckStatus(
+            @PathVariable Long todoId,
+            @RequestBody Map<String, Boolean> body
+    ) {
+        boolean checked = body.getOrDefault("todoChecked", false);
+        todolistService.updateTodoChecked(todoId, checked);
+        return ResponseEntity.ok().build();
     }
 
     // file verify
@@ -153,7 +162,6 @@ public class TodolistController {
         }
     }
 
-
     // 전체 변환 상태별 조회
     @GetMapping("/convert/status")
     public List<Todolist> getByConvertStatus(@RequestParam("status") String status) {
@@ -197,10 +205,37 @@ public class TodolistController {
         }
     }
 
+    // ✅ 파일 수정을 위한 새로운 엔드포인트 추가
+    @PatchMapping("/{todoId}/with-file")
+    public ResponseEntity<?> updateTodolistWithFile(
+            @PathVariable Long todoId,
+            @RequestPart(value = "data", required = false) TodolistUpdateRequest request, // JSON 데이터
+            @RequestPart(value = "file", required = false) MultipartFile file // 파일 (선택적)
+    ) {
+        try {
+            Long userId = AuthUtil.getCurrentUserId();
+
+            // request가 null인 경우 빈 객체 생성
+            if (request == null) {
+                request = new TodolistUpdateRequest();
+            }
+
+            Todolist updated = todolistService.updateTodolistWithFile(todoId, request, userId, file);
+            return ResponseEntity.ok(updated);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body("마감일 제한: " + e.getMessage());
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("권한 오류: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("서버 오류: " + e.getMessage());
+        }
+    }
+
+
 
 
     //내 이번주 할일 목록 조회
-
     @GetMapping("/me/weekly")
     public List<TeamWeeklyTodoDto> getMyWeeklyTodosByUser() {
         Long userId = AuthUtil.getCurrentUserId();
@@ -214,5 +249,7 @@ public class TodolistController {
         return ResponseEntity.ok(todolistService.getMyTodosForCalendar(userId));
     }
 }
+
+
 
 

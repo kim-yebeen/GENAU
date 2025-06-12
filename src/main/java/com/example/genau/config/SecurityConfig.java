@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,11 +37,16 @@ public class SecurityConfig {
                                 "/invitations/validate", // 초대 링크 검증
                                 "/invitations/accept",   // 초대 수락
                                 "/uploads/**",
-                                "/public/**"             // 기타 공개 경로
+                                "/public/**",             // 기타 공개 경로
+                                "/ws/**"
                         ).permitAll()
 
                         // 나머지 모든 요청은 인증 필요
                         .anyRequest().authenticated()
+                )
+                .headers(headers -> headers
+                        .frameOptions(frameOptions -> frameOptions.disable())
+                        .httpStrictTransportSecurity(hstsConfig -> hstsConfig.disable())
                 )
                 // JWT 필터를 UsernamePasswordAuthenticationFilter 전에 추가
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -48,6 +54,11 @@ public class SecurityConfig {
         return http.build();
     }
 
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring()
+                .requestMatchers("/ws/**");
+    }
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();

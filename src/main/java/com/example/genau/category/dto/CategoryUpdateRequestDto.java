@@ -7,5 +7,5 @@ import lombok.Setter;
 @Setter
 public class CategoryUpdateRequestDto {
     private String catName;
-
+    private String catColor;
 }

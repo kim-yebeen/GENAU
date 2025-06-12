@@ -54,10 +54,25 @@ public class CategoryService {
     }
 
     @Transactional
+    public void updateCategoryColor(Long catId, String catColor, Long userId) {
+        Category cat = categoryRepository.findById(catId).orElseThrow(() -> new RuntimeException("카테고리를 찾을 수 없습니다."));
+
+        validateTeamMembership(cat.getTeam().getTeamId(), userId);
+
+        // 색상 값 유효성 검사
+        if (catColor != null && !catColor.matches("^#[0-9A-Fa-f]{6}$")) {
+            throw new IllegalArgumentException("올바른 색상 형식이 아닙니다. (#RRGGBB 형식을 사용하세요.)");
+        }
+
+        cat.setCatColor(catColor);
+        categoryRepository.save(cat);
+    }
+
+    @Transactional
     public void deleteCategory(Long catId, Long userId)
     {
         Category cat = categoryRepository.findById(catId)
-                        .orElseThrow(() -> new IllegalArgumentException("해당 카테고리가 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("해당 카테고리가 없습니다."));
 
         validateTeamMembership(cat.getTeam().getTeamId(), userId);
 
@@ -85,7 +100,7 @@ public class CategoryService {
 
         List<Category> categories = categoryRepository.findByTeam_TeamId(teamId);
         return categories.stream()
-                .map(cat -> new CategoryResponseDto(cat.getCatId(), cat.getCatName()))
+                .map(cat -> new CategoryResponseDto(cat.getCatId(), cat.getCatName(), cat.getCatColor()))
                 .collect(Collectors.toList());
     }
 }

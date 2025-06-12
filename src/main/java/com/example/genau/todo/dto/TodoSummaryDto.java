@@ -12,7 +12,10 @@ public class TodoSummaryDto {
     private String todoDes;
     private LocalDate dueDate;
     private Boolean todoChecked;
+    private String fileForm;
+    private String uploadedFilePath;
     private Long   catId;
     private String categoryName;
     private Long assigneeId;
+    private Long creatorId;
 }

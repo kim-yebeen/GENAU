@@ -24,4 +24,6 @@ public class Category {
 
     @Column(name = "cat_name", nullable = false)
     private String catName;
+    @Column(name = "cat_color")
+    private String catColor;
 }

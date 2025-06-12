@@ -68,4 +68,23 @@ public class CategoryController {
         categoryService.deleteCategory(catId, userId);
         return ResponseEntity.ok(Map.of("message", "카테고리 삭제 완료"));
     }
+
+    // 4) 카테고리 색상 수정Add commentMore actions
+    @PatchMapping("/{catId}/color")
+    public ResponseEntity<Map<String, Object>> updateCategoryColor(
+            @PathVariable Long teamId,
+            @PathVariable Long catId,
+            @RequestBody Map<String, String> request) {
+        String catColor = request.get("catColor");
+        if (catColor == null || catColor.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "색상 값이 필요합니다"));
+        }
+
+        Long userId = AuthUtil.getCurrentUserId();
+        categoryService.updateCategoryColor(catId, catColor, userId);
+
+        return ResponseEntity.ok(Map.of("message", "카테고리 색상 수정 완료"));
+    }
 }
+
