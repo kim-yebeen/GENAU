@@ -1,6 +1,7 @@
 package com.example.genau.notice.service;
 
 import com.example.genau.notice.dto.NotificationDto;
+import com.example.genau.notice.handler.NotificationUpdateHandler;
 import com.example.genau.team.domain.Team;       // ← 추가
 import com.example.genau.user.domain.User;       // ← 추가
 import com.example.genau.notice.domain.Notice;
@@ -29,6 +30,8 @@ public class NotificationService {
     private final TeamRepository           teamRepository;
     private final TodolistRepository       todolistRepository;
     private final UserRepository           userRepository;
+    private final NotificationUpdateHandler notificationUpdateHandler;
+
 
     /** 0) 팀 참여 즉시 알림 생성 */
     public void createTeamJoinNotification(Long newTeammatesId) {
@@ -55,13 +58,21 @@ public class NotificationService {
             Notice notice = Notice.builder()
                     .teammatesId(tm.getTeammatesId())
                     .noticeType("TEAM_JOIN")
-                    .referenceId(teamId)                // 참조용: 팀 ID
-                    .noticeMessage(
-                            String.format("%s 팀에 %s 님이 참여했습니다", teamName, newUserName)
-                    )
+                    .referenceId(teamId)
+                    .noticeMessage(String.format("%s 팀에 %s 님이 참여했습니다", teamName, newUserName))
                     .build();
             noticeRepository.save(notice);
+
+            // 해당 사용자의 새 카운트 전송
+            Long targetUserId = tm.getUserId();
+            long newCount = getUnreadCountByUser(targetUserId);
+            String message = String.format(
+                    "{\"type\":\"NOTIFICATION_COUNT_UPDATED\", \"userId\":%d, \"unreadCount\":%d}",
+                    targetUserId, newCount
+            );
+            notificationUpdateHandler.broadcast(message);
         }
+
     }
 
     // 매일 오전 9시에 실행.'내일' 마감인 할 일을 찾아, 담당자에게 알림 생성
@@ -115,28 +126,41 @@ public class NotificationService {
         }
     }
 
-    //3) 알림 삭제
-
+    // 3) 알림 삭제 (웹소켓 브로드캐스트 추가)
     public void deleteNotification(Long noticeId, Long userId) {
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> new EntityNotFoundException("Notice not found: " + noticeId));
 
-        validateNotificationOwnership(notice,userId);
-
+        validateNotificationOwnership(notice, userId);
         noticeRepository.deleteById(noticeId);
+
+        // ✅ 웹소켓으로 실시간 카운트 업데이트 전송
+        long newCount = getUnreadCountByUser(userId);
+        String message = String.format(
+                "{\"type\":\"NOTIFICATION_COUNT_UPDATED\", \"userId\":%d, \"unreadCount\":%d}",
+                userId, newCount
+        );
+        notificationUpdateHandler.broadcast(message);
     }
 
-    //4) 알림 읽음 표시
+
+    // 4) 알림 읽음 표시 (웹소켓 브로드캐스트 추가)
     public void markAsRead(Long noticeId, Long userId) {
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> new EntityNotFoundException("Notice not found: " + noticeId));
-        notice.setIsRead(true);
 
         validateNotificationOwnership(notice, userId);
         notice.setIsRead(true);
         noticeRepository.save(notice);
-    }
 
+        // ✅ 웹소켓으로 실시간 카운트 업데이트 전송
+        long newCount = getUnreadCountByUser(userId);
+        String message = String.format(
+                "{\"type\":\"NOTIFICATION_COUNT_UPDATED\", \"userId\":%d, \"unreadCount\":%d}",
+                userId, newCount
+        );
+        notificationUpdateHandler.broadcast(message);
+    }
 
     /** (1) 내 모든 알림 조회 */
     public List<NotificationDto> getNotificationsByUser (Long userId){
