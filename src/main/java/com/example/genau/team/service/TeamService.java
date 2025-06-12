@@ -35,7 +35,6 @@ public class TeamService {
     private final UserRepository userRepository;          // ← UserRepository 주입
     private final EmailService emailService;              // ← 이메일 발송 서비스
 
-
     // 팀 생성 메서드
     public Team createTeam(TeamCreateRequest request, Long userId) {
         // 1. 팀 저장
@@ -164,8 +163,7 @@ public class TeamService {
                 .toList();
     }
 
-
-    //사용자가 속한 모든 팀 스페이스 요약 조회
+    // 사용자가 속한 모든 팀 스페이스 요약 조회
     @Transactional(readOnly = true)
     public List<TeamSummaryDto> getMyTeams(Long userId) {
         List<Teammates> all = teammatesRepository.findAllByUserId(userId);
@@ -225,5 +223,38 @@ public class TeamService {
         teamRepository.save(team);
 
         return url;
+    }
+
+    // 팀 프로필 이미지 삭제 (추가)
+    @Transactional
+    public void deleteTeamProfileImage(Long teamId, Long userId) throws Exception {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 팀이 없습니다. id=" + teamId));
+
+        // 팀 생성자만 삭제 가능
+        if (!team.getUserId().equals(userId)) {
+            throw new AccessDeniedException("팀 생성자만 팀 프로필 이미지를 삭제할 수 있습니다.");
+        }
+
+        String profileImg = team.getTeamProfileImg();
+        if (profileImg != null && !profileImg.isBlank()) {
+            // 파일 경로 추출
+            String dir = System.getProperty("user.dir");
+            String filePath;
+            if (profileImg.startsWith("/")) {
+                filePath = dir + profileImg;
+            } else {
+                filePath = dir + "/" + profileImg;
+            }
+            Path path = Paths.get(filePath);
+            try {
+                Files.deleteIfExists(path);
+            } catch (Exception e) {
+                // 파일이 없어도 무시
+            }
+            team.setTeamProfileImg(null);
+            team.setTeamUpdated(LocalDateTime.now());
+            teamRepository.save(team);
+        }
     }
 }
