@@ -31,6 +31,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authz -> authz
                         // 인증이 필요 없는 공개 경로
                         .requestMatchers(
+                                "/",
                                 "/auth/**",           // 인증 관련 (로그인, 회원가입 등)
                                 "/invitations/validate", // 초대 링크 검증
                                 "/invitations/accept",   // 초대 수락
