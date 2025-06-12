@@ -2,6 +2,7 @@ package com.example.genau.todo.service;
 
 import com.example.genau.category.domain.Category;
 import com.example.genau.category.repository.CategoryRepository;
+import com.example.genau.todo.handler.TodoUpdateHandler;
 import com.example.genau.storage.service.StorageService;
 import com.example.genau.team.domain.Teammates;
 import com.example.genau.team.repository.TeamRepository;
@@ -28,7 +29,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.TemporalAdjusters;
 import java.util.Map;
-import java.util.Optional;
 import java.util.List;
 import java.util.stream.Collectors;
 import com.example.genau.notice.service.NotificationService;
@@ -43,6 +43,8 @@ public class TodolistService {
     private final TeamRepository teamRepository;
     private final StorageService storageService;
     private final NotificationService notificationService;
+    private final TodoUpdateHandler todoUpdateHandler;
+
 
     private boolean isVisibleByDeadline(LocalDate dueDate) {
         LocalDate today = LocalDate.now();
@@ -102,6 +104,10 @@ public class TodolistService {
             throw new IllegalStateException("마감일이 지난 지 3일이 넘어 수정할 수 없습니다.");
         }
 
+        // DB 업데이트 전에 변경될 제목을 임시 저장
+        String oldTitle = todo.getTodoTitle();
+        String newTitle = request.getTodoTitle() != null ? request.getTodoTitle() : oldTitle;
+
         if (dueDate != null && today.isAfter(dueDate)) {
             todo.setFileForm(request.getFileForm());
         } else {
@@ -114,7 +120,17 @@ public class TodolistService {
 
         todo.setTodoTime(LocalDateTime.now());
 
-        return todolistRepository.save(todo);
+        Todolist savedTodo = todolistRepository.save(todo);
+
+        if (request.getTodoTitle() != null) {
+            String message = String.format(
+                    "{\"type\":\"TODO_UPDATED\", \"todoId\":%d, \"newTitle\":\"%s\"}",
+                    savedTodo.getTodoId(), savedTodo.getTodoTitle()
+            );
+            todoUpdateHandler.broadcast(message);
+        }
+
+        return savedTodo; // ✅ 중복 save() 제거
     }
 
     public void deleteTodolist(Long todoId, Long userId) {
@@ -127,18 +143,13 @@ public class TodolistService {
         todolistRepository.deleteById(todoId);
     }
 
-<<<<<<< HEAD
-
-=======
->>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
     public Todolist updateTodolistWithFile(Long todoId, TodolistUpdateRequest request, Long userId, MultipartFile newFile) {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
 
-<<<<<<< HEAD
+
         // 권한 체크
-=======
->>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
+
         if (!todo.getCreatorId().equals(userId) && !todo.getAssigneeId().equals(userId)) {
             throw new AccessDeniedException("TODO 생성자 또는 담당자만 수정할 수 있습니다.");
         }
@@ -154,28 +165,23 @@ public class TodolistService {
             String oldFilePath = todo.getUploadedFilePath();
 
             try {
-<<<<<<< HEAD
+
                 // ✅ 1. 먼저 스토리지에서 기존 파일 삭제 (새 파일 업로드 전에)
-=======
->>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
+
                 if (oldFilePath != null && !oldFilePath.isBlank()) {
                     storageService.deleteOldTodoFiles(todoId, oldFilePath);
                 }
 
-<<<<<<< HEAD
                 // ✅ 2. uploads 폴더에서도 기존 파일 삭제
-=======
->>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
                 if (oldFilePath != null && !oldFilePath.isBlank()) {
                     java.nio.file.Path oldFile = java.nio.file.Paths.get(oldFilePath);
                     java.nio.file.Files.deleteIfExists(oldFile);
                     System.out.println("기존 uploads 파일 삭제: " + oldFile);
                 }
 
-<<<<<<< HEAD
+
                 // ✅ 3. 새 파일 업로드
-=======
->>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
+
                 String uploadDir = System.getProperty("user.dir") + "/uploads";
                 java.nio.file.Path uploadPath = java.nio.file.Paths.get(uploadDir);
 
@@ -187,14 +193,13 @@ public class TodolistService {
                 java.nio.file.Path filePath = uploadPath.resolve(fileName);
                 newFile.transferTo(filePath.toFile());
 
-<<<<<<< HEAD
                 // ✅ 4. DB 업데이트
                 todo.setUploadedFilePath(filePath.toString());
                 todo.setTodoTime(LocalDateTime.now());
                 todolistRepository.save(todo);
 
                 // ✅ 5. 새 파일을 스토리지에 복사
-=======
+
                 todo.setUploadedFilePath(filePath.toString());
                 todo.setTodoTime(LocalDateTime.now());
 
@@ -202,8 +207,6 @@ public class TodolistService {
                 todo.setTodoChecked(hasFile);
 
                 todolistRepository.save(todo);
-
->>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
                 storageService.copyToStorageImmediately(todoId, filePath.toString());
 
             } catch (Exception e) {
@@ -211,10 +214,8 @@ public class TodolistService {
             }
         }
 
-<<<<<<< HEAD
         // 다른 필드 업데이트가 있는 경우에만 기존 메서드 호출
-=======
->>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
+
         if (request != null && hasNonNullFields(request)) {
             return updateTodolist(todoId, request, userId);
         }
@@ -222,10 +223,8 @@ public class TodolistService {
         return todo;
     }
 
-<<<<<<< HEAD
     // ✅ request에 null이 아닌 필드가 있는지 확인하는 헬퍼 메서드
-=======
->>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
+
     private boolean hasNonNullFields(TodolistUpdateRequest request) {
         return request.getTodoTitle() != null ||
                 request.getTodoDes() != null ||
@@ -234,11 +233,9 @@ public class TodolistService {
                 request.getAssigneeId() != null;
     }
 
-<<<<<<< HEAD
 
     // 체크 상태(완료 여부) 업데이트
-=======
->>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
+
     public void updateTodoChecked(Long todoId, boolean checked) {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 투두를 찾을 수 없습니다. todoId = " + todoId));
@@ -336,10 +333,9 @@ public class TodolistService {
                 java.nio.file.Files.createDirectories(uploadPath);
             }
 
-<<<<<<< HEAD
+
             /// ✅ 3. 원본 파일명 그대로 사용 (todoId 제거)
-=======
->>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
+
             String fileName = originalFilename;
             java.nio.file.Path filePath = uploadPath.resolve(fileName);
 
@@ -354,10 +350,9 @@ public class TodolistService {
             todo.setSubmittedAt(LocalDateTime.now());
             todolistRepository.save(todo);
 
-<<<<<<< HEAD
+
             //storageService.moveToStorageIfConfirmed(todo.getTodoId());
-=======
->>>>>>> 72f337940af8d6ab185522d8fb20f829755ebd13
+
             storageService.copyToStorageImmediately(todo.getTodoId(), filePath.toString());
 
             notificationService.createTodoCompletedNotification(todoId);
