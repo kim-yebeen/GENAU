@@ -7,6 +7,7 @@ import com.example.genau.todo.dto.TodolistCreateRequest;
 import com.example.genau.todo.dto.TodolistUpdateRequest; // ✅ 추가
 import com.example.genau.todo.entity.Todolist;
 import com.example.genau.todo.repository.TodolistRepository;
+import com.example.genau.todo.entity.TodolistFile;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -228,6 +229,13 @@ public class FileConvertService {
             } catch (InterruptedException ignored) {}
         }
         throw new RuntimeException("파일 변환이 시간 내에 완료되지 않았습니다.");
+    }
+
+    public void convertToPdf(MultipartFile file, String uploadPath, TodolistFile fileEntity) {
+        Long todoId = fileEntity.getTodolist().getTodoId();
+        Long userId = fileEntity.getUploader().getUserId();
+
+        convertFile(file, "pdf", todoId, userId);
     }
 
 }

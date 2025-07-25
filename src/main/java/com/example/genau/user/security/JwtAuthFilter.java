@@ -53,12 +53,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (jwtUtil.validateToken(token)) {
 
                 // ⭐️ 블랙리스트 확인 추가
-                if (tokenBlacklistService.isTokenBlacklisted(token)) {
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                    response.getWriter().write("{\"error\":\"로그아웃된 토큰입니다.\"}");
-                    return;
-                }
+                //if (tokenBlacklistService.isTokenBlacklisted(token)) {
+                //    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                //    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                //    response.getWriter().write("{\"error\":\"로그아웃된 토큰입니다.\"}");
+                //    return;
+                //}
 
                 Long userId = jwtUtil.getUserId(token);
 
