@@ -3,6 +3,9 @@ package com.example.genau.todo.entity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import com.example.genau.user.domain.User;
+import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "todolist")
@@ -15,11 +18,19 @@ public class Todolist {
     private Long catId;
     private Long teamId;
 
-    @Column(name = "creator_id")
-    private Long creatorId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "creator_id")
+    private User creator;
 
-    @Column(name = "assignee_id")
+    @Transient
     private Long assigneeId;
+    @ManyToMany
+    @JoinTable(
+            name = "todolist_assignees",
+            joinColumns = @JoinColumn(name = "todo_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private List<User> assignees = new ArrayList<>();
 
     @Column(nullable = false)
     private String todoTitle;
@@ -29,7 +40,7 @@ public class Todolist {
     private LocalDate dueDate;
     private LocalDateTime todoTime;
 
-    @Column(length = 50) // ✅ 추가
+    @Column(name = "file_form", length = 50, nullable = true) // ✅ 추가
     private String fileForm; // 요구하는 파일 확장자 (예: pdf, docx)
 
     @Column(name = "uploaded_file_path")
@@ -48,6 +59,9 @@ public class Todolist {
     @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
 
+    @OneToMany(mappedBy = "todolist", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TodolistFile> files = new ArrayList<>();
+
 
     public Long getTodoId() { return todoId; }
     public void setTodoId(Long todoId) { this.todoId = todoId; }
@@ -58,11 +72,14 @@ public class Todolist {
     public Long getTeamId() { return teamId; }
     public void setTeamId(Long teamId) { this.teamId = teamId; }
 
-    public Long getCreatorId() { return creatorId; }
-    public void setCreatorId(Long creatorId) { this.creatorId = creatorId; }
+    public User getCreator() { return creator; }
+    public void setCreator(User creator) { this.creator = creator; }
 
     public Long getAssigneeId() { return assigneeId; }
     public void setAssigneeId(Long assigneeId) { this.assigneeId = assigneeId; }
+
+    public List<User> getAssignees() {return assignees;}
+    public void setAssignees(List<User> assignees) {this.assignees = assignees;}
 
     public String getTodoTitle() { return todoTitle; }
     public void setTodoTitle(String todoTitle) { this.todoTitle = todoTitle; }
@@ -100,6 +117,9 @@ public class Todolist {
     public void setSubmittedAt(LocalDateTime submittedAt) {
         this.submittedAt = submittedAt;
     }
+
+    public List<TodolistFile> getFiles() { return files; }
+    public void setFiles(List<TodolistFile> files) { this.files = files; }
 }
 
 

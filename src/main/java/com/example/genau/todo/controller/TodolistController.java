@@ -32,9 +32,19 @@ public class TodolistController {
     }
 
     @PostMapping
-    public Todolist createTodolist(@RequestBody TodolistCreateRequest request) {
-        Long userId = AuthUtil.getCurrentUserId();
-        return todolistService.createTodolist(request,userId);
+    public ResponseEntity<?> createTodolist(
+            @RequestPart("request") TodolistCreateRequest request,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files
+    ) {
+        try {
+            Long userId = AuthUtil.getCurrentUserId();
+            Todolist created = todolistService.createTodolist(request, userId, files);
+            return ResponseEntity.ok(created);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("요청 오류: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 오류: " + e.getMessage());
+        }
     }
 
     // todo modify
@@ -210,7 +220,7 @@ public class TodolistController {
     public ResponseEntity<?> updateTodolistWithFile(
             @PathVariable Long todoId,
             @RequestPart(value = "data", required = false) TodolistUpdateRequest request, // JSON 데이터
-            @RequestPart(value = "file", required = false) MultipartFile file // 파일 (선택적)
+            @RequestPart(value = "file", required = false) List<MultipartFile> files // 파일 (선택적)
     ) {
         try {
             Long userId = AuthUtil.getCurrentUserId();
@@ -220,7 +230,7 @@ public class TodolistController {
                 request = new TodolistUpdateRequest();
             }
 
-            Todolist updated = todolistService.updateTodolistWithFile(todoId, request, userId, file);
+            Todolist updated = todolistService.updateTodolistWithFile(todoId, request, userId, files);
             return ResponseEntity.ok(updated);
         } catch (IllegalStateException e) {
             return ResponseEntity.badRequest().body("마감일 제한: " + e.getMessage());

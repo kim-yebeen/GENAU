@@ -1,6 +1,7 @@
 package com.example.genau.todo.dto;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public class TodolistCreateRequest {
 
@@ -10,7 +11,7 @@ public class TodolistCreateRequest {
     private String todoTitle;
     private String todoDes;
     private LocalDate dueDate;
-    private Long assigneeId;
+    private List<Long> assigneeIds;
     private String fileForm;
     // Getter & Setter
     public Long getTeamId() { return teamId; }
@@ -32,8 +33,11 @@ public class TodolistCreateRequest {
     public LocalDate getDueDate() { return dueDate; }
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
 
-    public Long getAssigneeId() { return assigneeId; } // ✅ 추가
-    public void setAssigneeId(Long assigneeId) { this.assigneeId = assigneeId; }
+    //public Long getAssigneeId() { return assigneeId; } // ✅ 추가
+    //public void setAssigneeId(Long assigneeId) { this.assigneeId = assigneeId; }
+
+    public List<Long> getAssigneeIds() { return assigneeIds; }
+    public void setAssigneeIds(List<Long> assigneeIds) { this.assigneeIds = assigneeIds; }
 
     public String getFileForm() {
         return fileForm;
