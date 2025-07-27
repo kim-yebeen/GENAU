@@ -233,7 +233,7 @@ public class TodolistService {
 
         return savedTodo;
     }
-    
+
 
     public void deleteTodolist(Long todoId, Long userId) {
         Todolist todo = todolistRepository.findById(todoId)
