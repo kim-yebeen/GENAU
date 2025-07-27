@@ -41,6 +41,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
 
+        // 2. 토큰이 없거나 Bearer 형식이 아니면 다음 필터로 진행
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -53,12 +54,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (jwtUtil.validateToken(token)) {
 
                 // ⭐️ 블랙리스트 확인 추가
-                //if (tokenBlacklistService.isTokenBlacklisted(token)) {
-                //    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                //    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                //    response.getWriter().write("{\"error\":\"로그아웃된 토큰입니다.\"}");
-                //    return;
-                //}
+                if (tokenBlacklistService.isTokenBlacklisted(token)) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                    response.getWriter().write("{\"error\":\"로그아웃된 토큰입니다.\"}");
+                    return;
+                }
 
                 Long userId = jwtUtil.getUserId(token);
 
@@ -69,15 +70,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     return;
                 }
 
+                // 5. Spring Security 인증 객체 생성 및 설정
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userId,
                         null,
                         Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
                 );
 
+                // 6. SecurityContext에 인증 객체 설정
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
+            // 7. 토큰 처리 중 예외 발생 시 인증 실패 처리
             SecurityContextHolder.clearContext();
         }
 
