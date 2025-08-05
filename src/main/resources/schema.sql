@@ -1,11 +1,11 @@
 -- 1. 기존 테이블 삭제 (존재 시)
-DROP TABLE IF EXISTS todolist_file;
+/*DROP TABLE IF EXISTS todolist_file;
 DROP TABLE IF EXISTS todolist_assignees;
 DROP TABLE IF EXISTS todolist;
-DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS users;*/
 
 -- 2. users 테이블
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
                        user_id BIGSERIAL PRIMARY KEY,
                        user_name VARCHAR(255) NOT NULL,
                        mail VARCHAR(255) UNIQUE NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE users (
 );
 
 -- 3. todolist 테이블 (creator_id는 users 참조)
-CREATE TABLE todolist (
+CREATE TABLE IF NOT EXISTS todolist (
                           todo_id BIGSERIAL PRIMARY KEY,
                           team_id BIGINT NOT NULL,
                           cat_id BIGINT,
@@ -37,7 +37,7 @@ CREATE TABLE todolist (
 );
 
 -- 4. N:M 관계 - 담당자(todolist_assignees)
-CREATE TABLE todolist_assignees (
+CREATE TABLE IF NOT EXISTS todolist_assignees (
                                     todo_id BIGINT,
                                     user_id BIGINT,
                                     PRIMARY KEY (todo_id, user_id),
@@ -46,7 +46,7 @@ CREATE TABLE todolist_assignees (
 );
 
 -- 5. 1:N 관계 - 파일들(todolist_file)
-CREATE TABLE todolist_file (
+CREATE TABLE IF NOT EXISTS todolist_file (
                                file_id BIGSERIAL PRIMARY KEY,
                                todo_id BIGINT NOT NULL,
                                file_name VARCHAR(255),
