@@ -5,6 +5,7 @@ import com.example.genau.todo.dto.*;
 import com.example.genau.todo.entity.Todolist;
 import com.example.genau.todo.service.FileConvertService;
 import com.example.genau.todo.service.TodolistService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.access.AccessDeniedException;
@@ -33,12 +34,25 @@ public class TodolistController {
 
     @PostMapping
     public ResponseEntity<?> createTodolist(
-            @RequestPart("request") TodolistCreateRequest request,
+            HttpServletRequest request,
+            @RequestBody(required = false) TodolistCreateRequest jsonRequest,
+            @RequestPart(value = "request", required = false) TodolistCreateRequest partRequest,
             @RequestPart(value = "files", required = false) List<MultipartFile> files
     ) {
         try {
             Long userId = AuthUtil.getCurrentUserId();
-            Todolist created = todolistService.createTodolist(request, userId, files);
+
+            // Content-Type에 따라 요청 처리
+            String contentType = request.getContentType();
+            TodolistCreateRequest todoRequest;
+
+            if (contentType != null && contentType.contains("multipart/form-data")) {
+                todoRequest = partRequest;
+            } else {
+                todoRequest = jsonRequest;
+            }
+
+            Todolist created = todolistService.createTodolist(todoRequest, userId, files);
             return ResponseEntity.ok(created);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("요청 오류: " + e.getMessage());
