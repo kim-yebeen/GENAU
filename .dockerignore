@@ -1,0 +1,27 @@
+# Git
+.git
+.gitignore
+
+# Build
+build/
+target/
+!build/libs/*.jar
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Documentation
+README.md
+docs/
+
+# Test
+src/test/
