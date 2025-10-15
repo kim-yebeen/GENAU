@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import com.example.genau.user.domain.User;
 import java.util.List;
 import java.util.ArrayList;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "todolist")
@@ -20,6 +21,7 @@ public class Todolist {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "creator_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User creator;
 
     @Transient
@@ -30,6 +32,7 @@ public class Todolist {
             joinColumns = @JoinColumn(name = "todo_id"),
             inverseJoinColumns = @JoinColumn(name = "user_id")
     )
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private List<User> assignees = new ArrayList<>();
 
     @Column(nullable = false)

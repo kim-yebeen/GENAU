@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-
+import com.example.genau.user.domain.User;
 
 
 @RestController
@@ -63,9 +63,39 @@ public class TodolistController {
 
     // todo modify
     @PatchMapping("/{todoId}")
-    public Todolist updateTodolist(@PathVariable Long todoId, @RequestBody TodolistUpdateRequest request) {
-        Long userId=AuthUtil.getCurrentUserId();
-        return todolistService.updateTodolist(todoId, request, userId);
+    public ResponseEntity<?> updateTodolist(@PathVariable Long todoId, @RequestBody TodolistUpdateRequest request) {
+        Long userId = AuthUtil.getCurrentUserId();
+        Todolist updated = todolistService.updateTodolist(todoId, request, userId);
+
+        // ✅ DTO로 변환해서 반환
+        TodoSummaryDto dto = convertToDto(updated);
+        return ResponseEntity.ok(dto);
+    }
+    private TodoSummaryDto convertToDto(Todolist t) {
+        List<Long> assigneeIds = t.getAssignees().stream()
+                .map(User::getUserId)
+                .toList();
+
+        List<String> assigneeNames = t.getAssignees().stream()
+                .map(User::getUserName)
+                .toList();
+
+        Long creatorId = t.getCreator() != null ? t.getCreator().getUserId() : null;
+
+        return new TodoSummaryDto(
+                t.getTodoId(),
+                t.getTodoTitle(),
+                t.getTodoDes(),
+                t.getDueDate(),
+                t.getTodoChecked(),
+                t.getFileForm(),
+                t.getUploadedFilePath(),
+                t.getCatId(),
+                null, // categoryName은 필요시 조회
+                assigneeIds,
+                assigneeNames,
+                creatorId
+        );
     }
 
     // todo delete
