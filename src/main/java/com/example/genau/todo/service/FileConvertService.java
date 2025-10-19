@@ -7,6 +7,7 @@ import com.example.genau.todo.dto.TodolistCreateRequest;
 import com.example.genau.todo.dto.TodolistUpdateRequest; // ✅ 추가
 import com.example.genau.todo.entity.Todolist;
 import com.example.genau.todo.repository.TodolistRepository;
+import com.example.genau.todo.entity.TodolistFile;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -62,7 +63,7 @@ public class FileConvertService {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found: " + todoId));
 
-        // 권한 체크: 팀원만 파일 변환 가능
+        // ✅ 권한 체크: 팀원만 파일 변환 가능
         validateTeamMembership(todo.getTeamId(), userId);
 
         try {
@@ -119,12 +120,12 @@ public class FileConvertService {
 
             MultipartBody.Builder bodyBuilder = new MultipartBody.Builder().setType(MultipartBody.FORM);
 
-// form parameters를 모두 추가
+// ⚠️ form parameters를 모두 추가
             parameters.fields().forEachRemaining(entry -> {
                 bodyBuilder.addFormDataPart(entry.getKey(), entry.getValue().asText());
             });
 
-// 실제 파일도 함께 전송
+// ⚠️ 실제 파일도 함께 전송
             bodyBuilder.addFormDataPart(
                     "file",
                     file.getOriginalFilename(),
@@ -228,6 +229,13 @@ public class FileConvertService {
             } catch (InterruptedException ignored) {}
         }
         throw new RuntimeException("파일 변환이 시간 내에 완료되지 않았습니다.");
+    }
+
+    public void convertToPdf(MultipartFile file, String uploadPath, TodolistFile fileEntity) {
+        Long todoId = fileEntity.getTodolist().getTodoId();
+        Long userId = fileEntity.getUploader().getUserId();
+
+        convertFile(file, "pdf", todoId, userId);
     }
 
 }
