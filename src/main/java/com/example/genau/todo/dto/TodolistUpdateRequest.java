@@ -2,17 +2,18 @@ package com.example.genau.todo.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDate;
+import java.util.List;
 
 public class TodolistUpdateRequest {
 
     private String todoTitle;
     private String todoDes;
     private String fileForm;
-    private Long assigneeId;
+    private List<Long> assigneeIds;
 
-    // getter, setter 확인
-    public Long getAssigneeId() { return assigneeId; }
-    public void setAssigneeId(Long assigneeId) { this.assigneeId = assigneeId; }
+    public List<Long> getAssigneeIds() { return assigneeIds; }
+    public void setAssigneeIds(List<Long> assigneeIds) { this.assigneeIds = assigneeIds; }
+
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate dueDate;
 

@@ -1,6 +1,7 @@
 package com.example.genau.todo.repository;
 
 import com.example.genau.todo.entity.Todolist;
+import com.example.genau.user.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -65,6 +66,10 @@ public interface TodolistRepository extends JpaRepository<Todolist, Long> {
     @Query("SELECT t FROM Todolist t JOIN t.assignees a " +
             "WHERE a.userId = :assigneeId")
     List<Todolist> findAllByAssigneeId(@Param("assigneeId") Long assigneeId);
+
+    List<Todolist> findAllByAssigneesContaining(User user);
+
+    // 2. getMyWeeklyTodosByUser용
 
 
 }

@@ -209,7 +209,17 @@ public class TodolistService {
             if (request.getTodoDes() != null) todo.setTodoDes(request.getTodoDes());
             if (request.getDueDate() != null) todo.setDueDate(request.getDueDate());
             if (request.getFileForm() != null) todo.setFileForm(request.getFileForm());
-            if (request.getAssigneeId() != null) todo.setAssigneeId(request.getAssigneeId());
+            if (request.getAssigneeIds() != null) { // DTO가 List<Long> getAssigneeIds()를 반환한다고 가정
+                if (request.getAssigneeIds().isEmpty()) {
+                    todo.setAssignees(new ArrayList<>()); // 빈 리스트로 설정
+                } else {
+                    List<User> users = request.getAssigneeIds().stream()
+                            .map(id -> userRepository.findById(id)
+                                    .orElseThrow(() -> new IllegalArgumentException("User not found: " + id)))
+                            .toList();
+                    todo.setAssignees(users);
+                }
+            }
         }
 
         todo.setTodoTime(LocalDateTime.now());
@@ -348,7 +358,7 @@ public class TodolistService {
                 request.getTodoDes() != null ||
                 request.getDueDate() != null ||
                 request.getFileForm() != null ||
-                request.getAssigneeId() != null;
+                request.getAssigneeIds() != null;
     }
 
 
@@ -608,7 +618,10 @@ public class TodolistService {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
 
-        if (!todo.getAssigneeId().equals(userId)) {
+        boolean isAssignee = todo.getAssignees().stream()
+                .anyMatch(user -> user.getUserId().equals(userId));
+
+        if (!isAssignee) {
             throw new AccessDeniedException("TODO 담당자만 파일을 삭제할 수 있습니다.");
         }
 
@@ -638,7 +651,10 @@ public class TodolistService {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
 
-        if (!todo.getAssigneeId().equals(userId)) {
+        boolean isAssignee = todo.getAssignees().stream()
+                .anyMatch(user -> user.getUserId().equals(userId));
+
+        if (!isAssignee) {
             throw new AccessDeniedException("TODO 담당자만 변환된 파일을 삭제할 수 있습니다.");
         }
 
@@ -672,11 +688,14 @@ public class TodolistService {
                     Long assigneeId = tm.getTeammatesId();
 
                     List<WeekTodoDto> todos = todolistRepository
-                            .findAllByTeamIdAndAssigneeIdAndDueDateBetween(
-                                    teamId, userId, weekStart, weekEnd
+                            .findAllByTeamIdAndDueDateBetween( // (AssigneeId가 빠진 메서드 필요)
+                                    teamId, weekStart, weekEnd
                             )
                             .stream()
+                            // 2. 'assignees' 목록에 현재 유저가 포함된 것만 필터링
+                            .filter(t -> t.getAssignees().contains(currentUser))
                             .map(t -> {
+                                // ... (이하 map 로직 동일)
                                 String catName = categoryRepository.findById(t.getCatId())
                                         .map(Category::getCatName)
                                         .orElse("Unknown");
@@ -685,7 +704,7 @@ public class TodolistService {
                                         t.getCatId(),
                                         catName,
                                         t.getTeamId(),
-                                        t.getAssigneeId(),
+                                        t.getAssigneeId(), // 🚨 이 필드는 WeekTodoDto에서 제거하거나 null 처리 필요
                                         t.getTodoTitle(),
                                         t.getTodoDes(),
                                         t.getTodoChecked(),
@@ -705,7 +724,12 @@ public class TodolistService {
     }
 
     public List<TodoCalendarSummaryDto> getMyTodosForCalendar(Long userId) {
-        List<Todolist> myTodos = todolistRepository.findAllByAssigneeId(userId);
+        // 1. 현재 유저 객체를 찾습니다.
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+        // 2. Repository 메서드 변경: `findAllByAssigneeId` 대신 `findAllByAssigneesContaining`
+        List<Todolist> myTodos = todolistRepository.findAllByAssigneesContaining(currentUser);
 
         return myTodos.stream()
                 .map(t -> new TodoCalendarSummaryDto(
