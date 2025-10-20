@@ -114,7 +114,7 @@ public class TodolistService {
             List<User> users = request.getAssigneeIds().stream()
                     .map(id -> userRepository.findById(id)
                             .orElseThrow(() -> new IllegalArgumentException("User not found: " + id)))
-                    .toList();
+                    .collect(Collectors.toList());
             todo.setAssignees(users);
         }
 
@@ -216,7 +216,7 @@ public class TodolistService {
                     List<User> users = request.getAssigneeIds().stream()
                             .map(id -> userRepository.findById(id)
                                     .orElseThrow(() -> new IllegalArgumentException("User not found: " + id)))
-                            .toList();
+                            .collect(Collectors.toList());
                     todo.setAssignees(users);
                 }
             }
