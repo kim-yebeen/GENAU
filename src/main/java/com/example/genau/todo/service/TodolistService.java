@@ -416,8 +416,15 @@ public class TodolistService {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
 
-        if (!todo.getAssigneeId().equals(userId)) {
-            throw new IllegalArgumentException("이 투두는 해당 팀원에게 할당되지 않았습니다.");
+        List<User> assignees = todo.getAssignees();
+
+        // 2. 현재 사용자가 담당자 목록에 포함되어 있는지 확인합니다.
+        boolean isAssignee = assignees.stream()
+                .anyMatch(user -> user.getUserId().equals(userId));
+
+        // 3. 담당자가 아니라면 예외를 발생시킵니다.
+        if (!isAssignee) {
+            throw new AccessDeniedException("파일은 담당자만 제출할 수 있습니다.");
         }
 
         LocalDate today = LocalDate.now();
@@ -679,6 +686,9 @@ public class TodolistService {
         LocalDate today     = LocalDate.now();
         LocalDate weekStart = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.SUNDAY));
         LocalDate weekEnd   = weekStart.plusDays(6);
+
+        User currentUser = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
         List<Teammates> myTeams = teammatesRepository.findAllByUserId(userId);
 
