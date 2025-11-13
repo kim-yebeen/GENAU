@@ -416,20 +416,26 @@ public class TodolistService {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
 
-        List<User> assignees = todo.getAssignees();
+        // ✅ 권한 체크 수정: 담당자가 있으면 담당자만, 없으면 팀원 누구나
+        if (todo.getAssignees() != null && !todo.getAssignees().isEmpty()) {
+            // 담당자가 지정된 경우: 담당자만 제출 가능
+            boolean isAssignee = todo.getAssignees().stream()
+                    .anyMatch(user -> user.getUserId().equals(userId));
 
-        // 2. 현재 사용자가 담당자 목록에 포함되어 있는지 확인합니다.
-        boolean isAssignee = assignees.stream()
-                .anyMatch(user -> user.getUserId().equals(userId));
-
-        // 3. 담당자가 아니라면 예외를 발생시킵니다.
-        if (!isAssignee) {
-            throw new AccessDeniedException("파일은 담당자만 제출할 수 있습니다.");
+            if (!isAssignee) {
+                throw new AccessDeniedException("파일은 담당자만 제출할 수 있습니다.");
+            }
+        } else {
+            // 담당자가 지정되지 않은 경우: 팀원이면 누구나 제출 가능
+            validateTeamMembership(todo.getTeamId(), userId);
         }
 
+        // ✅ 마감일 체크: 마감일 이후에도 제출 가능하도록 수정
         LocalDate today = LocalDate.now();
-        if (todo.getDueDate() != null && today.isAfter(todo.getDueDate().plusDays(3))) {
-            throw new IllegalStateException("마감일이 지난 지 3일이 지나 업로드할 수 없습니다.");
+        LocalDate dueDate = todo.getDueDate();
+
+        if (dueDate != null && today.isAfter(dueDate.plusDays(3))) {
+            throw new IllegalStateException("마감일이 지난 지 3일이 넘어 업로드할 수 없습니다.");
         }
 
         if (file.isEmpty()) {
@@ -468,33 +474,71 @@ public class TodolistService {
                 java.nio.file.Files.createDirectories(uploadPath);
             }
 
-
-            /// ✅ 3. 원본 파일명 그대로 사용 (todoId 제거)
-
             String fileName = originalFilename;
             java.nio.file.Path filePath = uploadPath.resolve(fileName);
-
             file.transferTo(filePath.toFile());
 
+            // ✅ 파일 정보를 TodolistFile에 추가
+            User uploader = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+
+            TodolistFile todolistFile = TodolistFile.builder()
+                    .fileName(originalFilename)
+                    .filePath(filePath.toString())
+                    .contentType(file.getContentType())
+                    .uploadedAt(LocalDateTime.now())
+                    .todolist(todo)
+                    .uploader(uploader)
+                    .build();
+
+            todo.getFiles().add(todolistFile);
+
+            // ✅ 기존 uploadedFilePath도 유지 (하위 호환성)
             todo.setUploadedFilePath(filePath.toString());
 
-            boolean hasFile = todo.getUploadedFilePath() != null && !todo.getUploadedFilePath().isBlank();
-            todo.setTodoChecked(hasFile);
+            // ✅ 완료 처리 로직 수정
+            checkAndUpdateCompletion(todo);
 
             todo.setTodoTime(LocalDateTime.now());
             todo.setSubmittedAt(LocalDateTime.now());
             todolistRepository.save(todo);
 
-
-            //storageService.moveToStorageIfConfirmed(todo.getTodoId());
-
             storageService.copyToStorageImmediately(todo.getTodoId(), filePath.toString());
-
             notificationService.createTodoCompletedNotification(todoId);
 
             return "파일 업로드 성공: " + filePath;
         } catch (Exception e) {
             throw new RuntimeException("파일 업로드 실패: " + e.getMessage());
+        }
+    }
+
+    // ✅ 새로운 메서드: 완료 처리 체크
+    private void checkAndUpdateCompletion(Todolist todo) {
+        LocalDate today = LocalDate.now();
+        LocalDate dueDate = todo.getDueDate();
+
+        // 마감일이 없으면 파일이 있으면 완료 처리
+        if (dueDate == null) {
+            boolean hasFile = !todo.getFiles().isEmpty();
+            todo.setTodoChecked(hasFile);
+            return;
+        }
+
+        // 마감일 이후인 경우
+        if (today.isAfter(dueDate)) {
+            // 마감일 내에 제출된 파일이 있는지 체크
+            boolean hasFileWithinDeadline = todo.getFiles().stream()
+                    .anyMatch(file -> {
+                        LocalDateTime uploadedAt = file.getUploadedAt();
+                        return uploadedAt != null &&
+                                !uploadedAt.toLocalDate().isAfter(dueDate);
+                    });
+
+            todo.setTodoChecked(hasFileWithinDeadline);
+        } else {
+            // 마감일 이전이면 파일이 있으면 완료 처리
+            boolean hasFile = !todo.getFiles().isEmpty();
+            todo.setTodoChecked(hasFile);
         }
     }
 
@@ -620,16 +664,20 @@ public class TodolistService {
         return todolistRepository.findAllByTeamIdAndConvertStatus(teamId, status);
     }
 
-    // ✅ 파일 삭제 시 스토리지 파일도 함께 삭제 (여기만 추가)
     public void deleteUploadedFile(Long todoId, Long userId) {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
 
-        boolean isAssignee = todo.getAssignees().stream()
-                .anyMatch(user -> user.getUserId().equals(userId));
+        // ✅ 권한 체크: 담당자가 있으면 담당자만, 없으면 팀원 누구나
+        if (todo.getAssignees() != null && !todo.getAssignees().isEmpty()) {
+            boolean isAssignee = todo.getAssignees().stream()
+                    .anyMatch(user -> user.getUserId().equals(userId));
 
-        if (!isAssignee) {
-            throw new AccessDeniedException("TODO 담당자만 파일을 삭제할 수 있습니다.");
+            if (!isAssignee) {
+                throw new AccessDeniedException("TODO 담당자만 파일을 삭제할 수 있습니다.");
+            }
+        } else {
+            validateTeamMembership(todo.getTeamId(), userId);
         }
 
         String pathStr = todo.getUploadedFilePath();
@@ -640,13 +688,15 @@ public class TodolistService {
         Path path = Paths.get(pathStr);
         try {
             Files.deleteIfExists(path);
-
-            // ✅ 스토리지 파일도 삭제 (이 한 줄만 추가)
             storageService.deleteOldTodoFiles(todoId, pathStr);
 
+            // ✅ 파일 목록에서도 제거
+            todo.getFiles().removeIf(file -> file.getFilePath().equals(pathStr));
+
             todo.setUploadedFilePath(null);
-            boolean hasFile = todo.getUploadedFilePath() != null && !todo.getUploadedFilePath().isBlank();
-            todo.setTodoChecked(hasFile);
+
+            // ✅ 완료 상태 재계산
+            checkAndUpdateCompletion(todo);
 
             todolistRepository.save(todo);
         } catch (IOException e) {
