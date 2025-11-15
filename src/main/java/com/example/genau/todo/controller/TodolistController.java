@@ -136,10 +136,10 @@ public class TodolistController {
     @PostMapping("/{todoId}/submit")
     public ResponseEntity<String> submitFile(
             @PathVariable Long todoId,
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("files") List<MultipartFile> files) {
         try {
             Long userId = AuthUtil.getCurrentUserId();
-            String result = todolistService.submitFile(todoId, userId, file);
+            String result = todolistService.submitFile(todoId, userId, files);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("요청 오류: " + e.getMessage());

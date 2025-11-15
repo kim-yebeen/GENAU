@@ -412,11 +412,17 @@ public class TodolistService {
         }
     }
 
-    public String submitFile(Long todoId, Long userId, MultipartFile file) {
+    // ✅ 변경점 요약
+// 1) 파라미터가 MultipartFile → List<MultipartFile> files 로 바뀜
+// 2) 단일 파일 기준 로직을 for (MultipartFile file : files) 루프로 변경
+// 3) 각 파일마다 확장자 검증, fileForm 매칭, 용량 제한, 저장, TodolistFile 추가
+// 4) 마지막에 uploadedFilePath 하나만 세팅(하위 호환용), files 목록은 전부 유지
+
+    public String submitFile(Long todoId, Long userId, List<MultipartFile> files) {
         Todolist todo = todolistRepository.findById(todoId)
                 .orElseThrow(() -> new IllegalArgumentException("Todo not found with id: " + todoId));
 
-        // ✅ 권한 체크 수정: 담당자가 있으면 담당자만, 없으면 팀원 누구나
+        // ✅ 권한 체크: 담당자가 있으면 담당자만, 없으면 팀원 누구나 (기존 로직 유지)
         if (todo.getAssignees() != null && !todo.getAssignees().isEmpty()) {
             // 담당자가 지정된 경우: 담당자만 제출 가능
             boolean isAssignee = todo.getAssignees().stream()
@@ -430,7 +436,7 @@ public class TodolistService {
             validateTeamMembership(todo.getTeamId(), userId);
         }
 
-        // ✅ 마감일 체크: 마감일 이후에도 제출 가능하도록 수정
+        // ✅ 마감일 체크: 마감일 + 3일 이후에는 제출 불가 (기존 로직 유지)
         LocalDate today = LocalDate.now();
         LocalDate dueDate = todo.getDueDate();
 
@@ -438,33 +444,15 @@ public class TodolistService {
             throw new IllegalStateException("마감일이 지난 지 3일이 넘어 업로드할 수 없습니다.");
         }
 
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("파일이 비어 있습니다.");
+        // ✅ [변경] 단일 file null/empty 체크 → 리스트 전체 체크
+        // 기존:
+        // if (file.isEmpty()) { ... }
+        if (files == null || files.isEmpty()) {
+            throw new IllegalArgumentException("제출할 파일이 없습니다.");
         }
 
-        String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null || !originalFilename.contains(".")) {
-            throw new IllegalArgumentException("파일 이름에 확장자가 없습니다.");
-        }
-
-        String extension = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
-        List<String> allowedExtensions = List.of(
-                "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
-                "txt", "md", "csv", "jpg", "jpeg", "png", "gif"
-        );
-
-        if (!allowedExtensions.contains(extension)) {
-            throw new IllegalArgumentException("허용되지 않은 파일 확장자입니다: " + extension);
-        }
-
-        long fileSizeInMB = file.getSize() / (1024 * 1024);
-        boolean isMedia = List.of("mp3", "wav", "mp4", "avi", "mov").contains(extension);
-
-        if (isMedia && fileSizeInMB > 100) {
-            throw new IllegalArgumentException("고용량 미디어 파일은 100MB 이하만 업로드 가능합니다.");
-        } else if (!isMedia && fileSizeInMB > 10) {
-            throw new IllegalArgumentException("문서 및 이미지 파일은 10MB 이하만 업로드 가능합니다.");
-        }
+        // ✅ 요구 확장자 (예: "pdf") — 이 값과 다른 확장자는 제출 불가
+        String requiredExtension = todo.getFileForm(); // null 이면 형식 제한 없음
 
         try {
             String uploadDir = System.getProperty("user.dir") + "/uploads";
@@ -474,43 +462,107 @@ public class TodolistService {
                 java.nio.file.Files.createDirectories(uploadPath);
             }
 
-            String fileName = originalFilename;
-            java.nio.file.Path filePath = uploadPath.resolve(fileName);
-            file.transferTo(filePath.toFile());
-
-            // ✅ 파일 정보를 TodolistFile에 추가
+            // ✅ 업로더는 한 번만 조회
             User uploader = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
-            TodolistFile todolistFile = TodolistFile.builder()
-                    .fileName(originalFilename)
-                    .filePath(filePath.toString())
-                    .contentType(file.getContentType())
-                    .uploadedAt(LocalDateTime.now())
-                    .todolist(todo)
-                    .uploader(uploader)
-                    .build();
+            // ✅ 여러 파일 경로를 저장하기 위한 리스트 (마지막 하나는 uploadedFilePath에 넣어줌)
+            List<String> savedPaths = new ArrayList<>();
 
-            todo.getFiles().add(todolistFile);
+            // ✅ [핵심 변경] 단일 파일 처리 → 여러 파일 반복 처리
+            // 기존에는:
+            // String originalFilename = file.getOriginalFilename();
+            // ...
+            // file.transferTo(filePath.toFile());
+            //
+            // 이런 식으로 한 번만 처리하던 것을, 아래처럼 for 루프로 감쌈
+            for (MultipartFile file : files) {
 
-            // ✅ 기존 uploadedFilePath도 유지 (하위 호환성)
-            todo.setUploadedFilePath(filePath.toString());
+                // --- 파일 단위 기본 검증 ---
+                if (file.isEmpty()) {
+                    throw new IllegalArgumentException("비어 있는 파일이 포함되어 있습니다.");
+                }
 
-            // ✅ 완료 처리 로직 수정
+                String originalFilename = file.getOriginalFilename();
+                if (originalFilename == null || !originalFilename.contains(".")) {
+                    throw new IllegalArgumentException("파일 이름에 확장자가 없습니다: " + originalFilename);
+                }
+
+                String extension = originalFilename.substring(originalFilename.lastIndexOf('.') + 1).toLowerCase();
+
+                // ✅ 허용 확장자 검증 (클래스 상단의 allowedExtensions 사용)
+                if (!allowedExtensions.contains(extension)) {
+                    throw new IllegalArgumentException("허용되지 않은 파일 확장자입니다: " + extension);
+                }
+
+                // ✅ fileForm과 제출 파일 확장자 강제 매칭 (기존 단일 파일 로직을 그대로 확장)
+                if (requiredExtension != null && !requiredExtension.isBlank()) {
+                    // fileForm은 "pdf", "docx" 와 같은 단일 확장자라고 가정
+                    if (!requiredExtension.equalsIgnoreCase(extension)) {
+                        throw new IllegalArgumentException(
+                                "요구된 파일 형식(" + requiredExtension + ")과 다른 파일(" + originalFilename + ")은 제출할 수 없습니다."
+                        );
+                    }
+                }
+
+                // ✅ 용량 제한 (기존 로직 그대로 사용)
+                long fileSizeInMB = file.getSize() / (1024 * 1024);
+                boolean isMedia = List.of("mp3", "wav", "mp4", "avi", "mov").contains(extension);
+
+                if (isMedia && fileSizeInMB > 100) {
+                    throw new IllegalArgumentException("고용량 미디어 파일은 100MB 이하만 업로드 가능합니다. 파일: " + originalFilename);
+                } else if (!isMedia && fileSizeInMB > 10) {
+                    throw new IllegalArgumentException("문서 및 이미지 파일은 10MB 이하만 업로드 가능합니다. 파일: " + originalFilename);
+                }
+
+                // --- 파일 저장 ---
+                // ✅ [변경] 이름 충돌 방지용 UUID prefix 추가
+                // 기존:
+                // String fileName = originalFilename;
+                // Path filePath = uploadPath.resolve(fileName);
+                String storedFileName = java.util.UUID.randomUUID() + "_" + originalFilename;
+                java.nio.file.Path filePath = uploadPath.resolve(storedFileName);
+                file.transferTo(filePath.toFile());
+
+                // ✅ TodolistFile 엔티티 생성 및 투두 추가 (기존 1개 → N개 누적)
+                TodolistFile todolistFile = TodolistFile.builder()
+                        .fileName(originalFilename)          // 사용자가 업로드한 원래 이름
+                        .filePath(filePath.toString())       // 서버에 저장된 실제 경로(UUID 포함)
+                        .contentType(file.getContentType())
+                        .uploadedAt(LocalDateTime.now())
+                        .todolist(todo)
+                        .uploader(uploader)
+                        .build();
+
+                todo.getFiles().add(todolistFile);
+                savedPaths.add(filePath.toString());
+
+                // ✅ 스토리지에도 복사 (파일별 1회씩)
+                storageService.copyToStorageImmediately(todo.getTodoId(), filePath.toString());
+            }
+
+            // ✅ [유지] 기존 uploadedFilePath도 세팅 (하위 호환용)
+            // 여러 개 중 마지막 파일 경로를 한 번만 저장
+            if (!savedPaths.isEmpty()) {
+                todo.setUploadedFilePath(savedPaths.get(savedPaths.size() - 1));
+            }
+
+            // ✅ 완료 처리 로직 (기존 checkAndUpdateCompletion 재사용)
             checkAndUpdateCompletion(todo);
 
             todo.setTodoTime(LocalDateTime.now());
             todo.setSubmittedAt(LocalDateTime.now());
             todolistRepository.save(todo);
 
-            storageService.copyToStorageImmediately(todo.getTodoId(), filePath.toString());
+            // ✅ 완료 알림 (기존 로직 유지)
             notificationService.createTodoCompletedNotification(todoId);
 
-            return "파일 업로드 성공: " + filePath;
+            return "파일 업로드 성공: " + savedPaths.size() + "개 파일이 제출되었습니다.";
         } catch (Exception e) {
             throw new RuntimeException("파일 업로드 실패: " + e.getMessage());
         }
     }
+
 
     // ✅ 새로운 메서드: 완료 처리 체크
     private void checkAndUpdateCompletion(Todolist todo) {
