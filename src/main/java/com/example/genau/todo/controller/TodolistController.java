@@ -283,13 +283,30 @@ public class TodolistController {
         }
     }
 
-    // ✅ 파일 목록 조회
+    // ✅ 파일 목록 조회 (DTO 반환으로 수정)
     @GetMapping("/{todoId}/files")
-    public ResponseEntity<List<TodolistFile>> getTodoFiles(@PathVariable Long todoId) {
+    public ResponseEntity<List<TodolistFileResponseDto>> getTodoFiles(@PathVariable Long todoId) {
         Long userId = AuthUtil.getCurrentUserId();
-        return ResponseEntity.ok(todolistService.getTodoFiles(todoId, userId));
-    }
+        List<TodolistFile> files = todolistService.getTodoFiles(todoId, userId);
 
+        // Entity -> DTO 변환 (순환 참조 방지)
+        List<TodolistFileResponseDto> response = files.stream()
+                .map(file -> TodolistFileResponseDto.builder()
+                        .id(file.getId())
+                        .fileName(file.getFileName())
+                        .filePath(file.getFilePath())
+                        .contentType(file.getContentType())
+                        .uploadedAt(file.getUploadedAt())
+                        .convertStatus(file.getConvertStatus())
+                        .convertedFilePath(file.getConvertedFilePath())
+                        .convertedAt(file.getConvertedAt())
+                        .uploaderId(file.getUploader().getUserId())
+                        .uploaderName(file.getUploader().getUserName())
+                        .build())
+                .toList();
+
+        return ResponseEntity.ok(response);
+    }
     // ✅ 특정 파일 다운로드 (원본)
     @GetMapping("/{todoId}/files/{fileId}/download")
     public ResponseEntity<Resource> downloadFileById(
