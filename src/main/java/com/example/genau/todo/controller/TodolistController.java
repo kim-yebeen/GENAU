@@ -307,25 +307,7 @@ public class TodolistController {
 
         return ResponseEntity.ok(response);
     }
-    // ✅ 특정 파일 다운로드 (원본)
-    @GetMapping("/{todoId}/files/{fileId}/download")
-    public ResponseEntity<Resource> downloadFileById(
-            @PathVariable Long todoId,
-            @PathVariable Long fileId
-    ) {
-        Long userId = AuthUtil.getCurrentUserId();
-        Resource resource = todolistService.downloadFileById(todoId, fileId, userId);
-        String filename = resource.getFilename();
 
-        String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8)
-                .replaceAll("\\+", "%20");
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + encodedFilename + "\"; filename*=UTF-8''" + encodedFilename)
-                .header(HttpHeaders.CONTENT_TYPE, "application/octet-stream")
-                .body(resource);
-    }
 
     // ✅ 변환된 파일 다운로드
     @GetMapping("/{todoId}/files/{fileId}/download-converted")
@@ -333,18 +315,85 @@ public class TodolistController {
             @PathVariable Long todoId,
             @PathVariable Long fileId
     ) {
-        Long userId = AuthUtil.getCurrentUserId();
-        Resource resource = todolistService.downloadConvertedFile(todoId, fileId, userId);
-        String filename = resource.getFilename();
+        try {
+            Long userId = AuthUtil.getCurrentUserId();
+            Resource resource = todolistService.downloadConvertedFile(todoId, fileId, userId);
 
-        String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8)
-                .replaceAll("\\+", "%20");
+            // ✅ 파일명 가져오기
+            String filename = resource.getFilename();
+            if (filename == null) {
+                filename = "converted_file.pdf";
+            }
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + encodedFilename + "\"; filename*=UTF-8''" + encodedFilename)
-                .header(HttpHeaders.CONTENT_TYPE, "application/octet-stream")
-                .body(resource);
+            String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8)
+                    .replaceAll("\\+", "%20");
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + encodedFilename + "\"; filename*=UTF-8''" + encodedFilename)
+                    .header(HttpHeaders.CONTENT_TYPE, "application/pdf")
+                    .body(resource);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    // ✅ 특정 파일 다운로드 (원본)
+    @GetMapping("/{todoId}/files/{fileId}/download")
+    public ResponseEntity<Resource> downloadFileById(
+            @PathVariable Long todoId,
+            @PathVariable Long fileId
+    ) {
+        try {
+            Long userId = AuthUtil.getCurrentUserId();
+            Resource resource = todolistService.downloadFileById(todoId, fileId, userId);
+            String filename = resource.getFilename();
+
+            String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8)
+                    .replaceAll("\\+", "%20");
+
+            // ✅ 파일 확장자에 따라 Content-Type 설정
+            String contentType = getContentType(filename);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + encodedFilename + "\"; filename*=UTF-8''" + encodedFilename)
+                    .header(HttpHeaders.CONTENT_TYPE, contentType)
+                    .body(resource);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    // ✅ Content-Type 결정 헬퍼 메서드
+    private String getContentType(String filename) {
+        if (filename == null) {
+            return "application/octet-stream";
+        }
+
+        String extension = "";
+        int lastDot = filename.lastIndexOf('.');
+        if (lastDot > 0) {
+            extension = filename.substring(lastDot + 1).toLowerCase();
+        }
+
+        return switch (extension) {
+            case "pdf" -> "application/pdf";
+            case "doc" -> "application/msword";
+            case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "xls" -> "application/vnd.ms-excel";
+            case "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case "ppt" -> "application/vnd.ms-powerpoint";
+            case "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            case "txt" -> "text/plain";
+            case "csv" -> "text/csv";
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "png" -> "image/png";
+            case "gif" -> "image/gif";
+            default -> "application/octet-stream";
+        };
     }
 
     // ✅ 특정 파일 삭제

@@ -624,6 +624,12 @@ public class TodolistService {
 
         try {
             Path path = Paths.get(pathStr).toAbsolutePath().normalize();
+
+            // ✅ 파일 존재 여부 확인
+            if (!Files.exists(path)) {
+                throw new RuntimeException("변환된 파일을 찾을 수 없습니다: " + pathStr);
+            }
+
             Resource resource = new UrlResource(path.toUri());
 
             if (resource.exists() && resource.isReadable()) {
