@@ -68,7 +68,6 @@ public class TodolistController {
         Long userId = AuthUtil.getCurrentUserId();
         Todolist updated = todolistService.updateTodolist(todoId, request, userId);
 
-        // ✅ DTO로 변환해서 반환
         TodoSummaryDto dto = convertToDto(updated);
         return ResponseEntity.ok(dto);
     }
@@ -133,7 +132,6 @@ public class TodolistController {
         return todolistService.verifyFile(todoId, file);
     }
 
-    // file submit
     // file submit
     @PostMapping("/{todoId}/submit")
     public ResponseEntity<?> submitFile(
@@ -390,7 +388,3 @@ public class TodolistController {
         return ResponseEntity.ok(todolistService.getMyTodosForCalendar(userId));
     }
 }
-
-
-
-
