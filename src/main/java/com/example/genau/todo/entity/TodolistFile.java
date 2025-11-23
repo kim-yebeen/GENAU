@@ -32,4 +32,9 @@ public class TodolistFile {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "uploader_id")
     private User uploader;
+
+    private String convertStatus;  // WAITING, SUCCESS, FAILED, null
+    private String convertedFilePath;  // 변환된 파일 저장 경로
+    private LocalDateTime convertedAt;  // 변환 완료 시간
+
 }

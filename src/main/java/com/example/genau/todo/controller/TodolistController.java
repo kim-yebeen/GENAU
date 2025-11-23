@@ -1,5 +1,6 @@
 package com.example.genau.todo.controller;
 
+import com.example.genau.todo.entity.TodolistFile;
 import com.example.genau.user.security.AuthUtil;
 import com.example.genau.todo.dto.*;
 import com.example.genau.todo.entity.Todolist;
@@ -133,14 +134,35 @@ public class TodolistController {
     }
 
     // file submit
+    // file submit
     @PostMapping("/{todoId}/submit")
-    public ResponseEntity<String> submitFile(
+    public ResponseEntity<?> submitFile(
             @PathVariable Long todoId,
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("file") List<MultipartFile> files) {
         try {
             Long userId = AuthUtil.getCurrentUserId();
-            String result = todolistService.submitFile(todoId, userId, file);
-            return ResponseEntity.ok(result);
+            List<TodolistFile> uploadedFiles = todolistService.submitFiles(todoId, userId, files);
+
+            // ✅ DTO로 변환 (순환 참조 방지)
+            List<TodolistFileResponseDto> response = uploadedFiles.stream()
+                    .map(file -> TodolistFileResponseDto.builder()
+                            .id(file.getId())
+                            .fileName(file.getFileName())
+                            .filePath(file.getFilePath())
+                            .contentType(file.getContentType())
+                            .uploadedAt(file.getUploadedAt())
+                            .convertStatus(file.getConvertStatus())
+                            .convertedFilePath(file.getConvertedFilePath())
+                            .convertedAt(file.getConvertedAt())
+                            .uploaderId(file.getUploader().getUserId())
+                            .uploaderName(file.getUploader().getUserName())
+                            .build())
+                    .toList();
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "파일 업로드 성공",
+                    "uploadedFiles", response
+            ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("요청 오류: " + e.getMessage());
         } catch (RuntimeException e) {
@@ -191,29 +213,6 @@ public class TodolistController {
         return ResponseEntity.ok(
                 todolistService.getTodosByCategoryId(teamId, catId, userId)
         );
-    }
-
-    @PostMapping("/{todoId}/convert")
-    public ResponseEntity<Resource> convertFile(
-            @PathVariable Long todoId,
-            @RequestParam("file") MultipartFile file,
-            @RequestParam("targetFormat") String targetFormat
-    ){
-        try {
-            Long userId = AuthUtil.getCurrentUserId();
-            Resource result = fileConvertService.convertFile(file, targetFormat, todoId, userId);
-            String filename = result.getFilename();
-            String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
-
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + encodedFilename + "\"; filename*=UTF-8''" + encodedFilename)
-                    .header(HttpHeaders.CONTENT_TYPE, "application/octet-stream")
-                    .body(result);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(null);
-        }
     }
 
     // 전체 변환 상태별 조회
@@ -286,7 +285,95 @@ public class TodolistController {
         }
     }
 
+    // ✅ 파일 목록 조회
+    @GetMapping("/{todoId}/files")
+    public ResponseEntity<List<TodolistFile>> getTodoFiles(@PathVariable Long todoId) {
+        Long userId = AuthUtil.getCurrentUserId();
+        return ResponseEntity.ok(todolistService.getTodoFiles(todoId, userId));
+    }
 
+    // ✅ 특정 파일 다운로드 (원본)
+    @GetMapping("/{todoId}/files/{fileId}/download")
+    public ResponseEntity<Resource> downloadFileById(
+            @PathVariable Long todoId,
+            @PathVariable Long fileId
+    ) {
+        Long userId = AuthUtil.getCurrentUserId();
+        Resource resource = todolistService.downloadFileById(todoId, fileId, userId);
+        String filename = resource.getFilename();
+
+        String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8)
+                .replaceAll("\\+", "%20");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + encodedFilename + "\"; filename*=UTF-8''" + encodedFilename)
+                .header(HttpHeaders.CONTENT_TYPE, "application/octet-stream")
+                .body(resource);
+    }
+
+    // ✅ 변환된 파일 다운로드
+    @GetMapping("/{todoId}/files/{fileId}/download-converted")
+    public ResponseEntity<Resource> downloadConvertedFile(
+            @PathVariable Long todoId,
+            @PathVariable Long fileId
+    ) {
+        Long userId = AuthUtil.getCurrentUserId();
+        Resource resource = todolistService.downloadConvertedFile(todoId, fileId, userId);
+        String filename = resource.getFilename();
+
+        String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8)
+                .replaceAll("\\+", "%20");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + encodedFilename + "\"; filename*=UTF-8''" + encodedFilename)
+                .header(HttpHeaders.CONTENT_TYPE, "application/octet-stream")
+                .body(resource);
+    }
+
+    // ✅ 특정 파일 삭제
+    @DeleteMapping("/{todoId}/files/{fileId}")
+    public ResponseEntity<String> deleteFileById(
+            @PathVariable Long todoId,
+            @PathVariable Long fileId
+    ) {
+        try {
+            Long userId = AuthUtil.getCurrentUserId();
+            todolistService.deleteUploadedFileById(todoId, fileId, userId);
+            return ResponseEntity.ok("파일이 삭제되었습니다.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("파일 삭제 실패: " + e.getMessage());
+        }
+    }
+
+    // ✅ 기존 convertFile 엔드포인트 수정
+    @PostMapping("/{todoId}/files/{fileId}/convert")
+    public ResponseEntity<Resource> convertFile(
+            @PathVariable Long todoId,
+            @PathVariable Long fileId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("targetFormat") String targetFormat
+    ){
+        try {
+            Long userId = AuthUtil.getCurrentUserId();
+            Resource result = fileConvertService.convertFile(file, targetFormat, fileId, userId);
+            String filename = result.getFilename();
+            String encodedFilename = URLEncoder.encode(filename, StandardCharsets.UTF_8)
+                    .replaceAll("\\+", "%20");
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + encodedFilename + "\"; filename*=UTF-8''" + encodedFilename)
+                    .header(HttpHeaders.CONTENT_TYPE, "application/octet-stream")
+                    .body(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
+        }
+    }
 
 
     //내 이번주 할일 목록 조회
